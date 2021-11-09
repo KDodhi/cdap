@@ -28,8 +28,11 @@ import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.internal.io.DatumReaderFactory;
 import io.cdap.cdap.internal.io.SchemaGenerator;
 import io.cdap.cdap.messaging.MessagingService;
+import io.cdap.cdap.metrics.process.gcp.GoogleCloudMonitoringWriter;
 import io.cdap.cdap.metrics.process.loader.MetricsWriterProvider;
 import io.cdap.cdap.metrics.store.MetricDatasetFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +58,8 @@ public class MessagingMetricsProcessorManagerService extends AbstractIdleService
   private final MetricsContext metricsContext;
   private final long metricsProcessIntervalMillis;
   private final Integer instanceId;
+
+  private static final Logger LOG = LoggerFactory.getLogger(MessagingMetricsProcessorManagerService.class);
 
   @Inject
   MessagingMetricsProcessorManagerService(CConfiguration cConf,
@@ -103,19 +108,27 @@ public class MessagingMetricsProcessorManagerService extends AbstractIdleService
   protected void startUp() throws Exception {
     MetricStoreMetricsWriter metricsWriter = new MetricStoreMetricsWriter(metricStore);
     DefaultMetricsWriterContext context = new DefaultMetricsWriterContext(metricsContext,
-      cConf, metricsWriter.getID());
+                                                                          cConf, metricsWriter.getID());
     metricsWriter.initialize(context);
     this.metricsWriters.add(metricsWriter);
+
+    //If enabled, provide option to write metrics to google cloud monitoring
+    if (cConf.getBoolean(Constants.Metrics.ENABLE_PUBLISH_TO_GCP)) {
+      this.metricsWriters.add(new GoogleCloudMonitoringWriter());
+    }
 
     for (Map.Entry<String, MetricsWriter> metricsWriterEntry : metricsWriterProvider.loadMetricsWriters().entrySet()) {
       MetricsWriter writer = metricsWriterEntry.getValue();
       this.metricsWriters.add(writer);
       DefaultMetricsWriterContext metricsWriterContext = new DefaultMetricsWriterContext(metricsContext,
-        cConf, writer.getID());
+                                                                                         cConf, writer.getID());
       writer.initialize(metricsWriterContext);
     }
 
+    String processorKey = String.format("metrics.processor.%s", instanceId);
+
     for (MetricsWriter metricsExtension : this.metricsWriters) {
+      MetricsMetaKeyProvider topicIdMetricsKeyProvider = getKeyProvider(metricsExtension, cConf);
       metricsProcessorServices.add(new MessagingMetricsProcessorService(
         cConf,
         metricDatasetFactory,
@@ -126,13 +139,22 @@ public class MessagingMetricsProcessorManagerService extends AbstractIdleService
         topicNumbers,
         metricsContext,
         metricsProcessIntervalMillis,
-        instanceId));
+        instanceId,
+        new DefaultMetadataHandler(metricDatasetFactory, processorKey, topicIdMetricsKeyProvider),
+        topicIdMetricsKeyProvider));
 
     }
 
     for (MessagingMetricsProcessorService processorService : metricsProcessorServices) {
       processorService.startAndWait();
     }
+  }
+
+  private MetricsMetaKeyProvider getKeyProvider(MetricsWriter writer, CConfiguration cConf) {
+    String confKey = String.format(Constants.Metrics.USE_SUBSCRIBER_METADATA_KEY, writer.getID());
+    boolean useSubscriberInKey = cConf.getBoolean(confKey, false);
+    LOG.info("Using subscriber info for writer {} ? {} ", writer.getID(), useSubscriberInKey);
+    return useSubscriberInKey ? new TopicSubscriberMetricsKeyProvider(writer.getID()) : new TopicIdMetricsKeyProvider();
   }
 
   @Override

@@ -795,6 +795,10 @@ public final class Constants {
     /** Whether to enable entity tagging for metrics for aggregation purposes. */
     public static final String AUTHORIZATION_METRICS_TAGS_ENABLED = "security.authorization.metrics.tags.enabled";
 
+    public static final String USE_SUBSCRIBER_METADATA_KEY = "metrics.use.subscriber.metadata.key.%s";
+
+    public static final String ENABLE_PUBLISH_TO_GCP = "metrics.enable.publish.to.gcp";
+
     /**
      * Metric's dataset related constants.
      */

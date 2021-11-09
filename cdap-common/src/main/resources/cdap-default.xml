@@ -2734,6 +2734,21 @@
     </description>
   </property>
 
+  <property>
+    <name>metrics.enable.publish.to.gcp</name>
+    <value>true</value>
+    <description>
+      Option to publish CDAP metrics to configured GCP.
+    </description>
+  </property>
+
+  <property>
+    <name>metrics.use.subscriber.metadata.key.google_cloud_monitoring_writer</name>
+    <value>true</value>
+    <description>
+      Specify whether the Metrics Writer should use subscriber name in metadata key
+    </description>
+  </property>
   <!-- Monitor Handler Configuration -->
 
   <property>
