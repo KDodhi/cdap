@@ -199,6 +199,6 @@ public class RemoteArtifactRepository implements ArtifactRepository {
   @Override
   public List<ArtifactDetail> getArtifactDetails(ArtifactRange range, int limit,
                                                  ArtifactSortOrder order) throws Exception {
-    throw new UnsupportedOperationException();
+    return artifactRepositoryReader.getArtifactDetails(range, limit, order);
   }
 }
