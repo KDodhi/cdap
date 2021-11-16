@@ -48,12 +48,14 @@ import io.cdap.cdap.internal.app.preview.DefaultPreviewRunner;
 import io.cdap.cdap.internal.app.preview.MessagingPreviewDataPublisher;
 import io.cdap.cdap.internal.app.runtime.ProgramRuntimeProviderLoader;
 import io.cdap.cdap.internal.app.runtime.artifact.ArtifactRepository;
+import io.cdap.cdap.internal.app.runtime.artifact.ArtifactRepositoryProvider;
 import io.cdap.cdap.internal.app.runtime.artifact.ArtifactRepositoryReader;
 import io.cdap.cdap.internal.app.runtime.artifact.ArtifactRepositoryReaderProvider;
 import io.cdap.cdap.internal.app.runtime.artifact.ArtifactStore;
 import io.cdap.cdap.internal.app.runtime.artifact.DefaultArtifactRepository;
 import io.cdap.cdap.internal.app.runtime.artifact.PluginFinder;
 import io.cdap.cdap.internal.app.runtime.artifact.PluginFinderProvider;
+import io.cdap.cdap.internal.app.runtime.artifact.RemoteArtifactRepository;
 import io.cdap.cdap.internal.app.runtime.workflow.BasicWorkflowStateWriter;
 import io.cdap.cdap.internal.app.runtime.workflow.WorkflowStateWriter;
 import io.cdap.cdap.internal.app.store.DefaultStore;
@@ -92,12 +94,15 @@ public class PreviewRunnerModule extends PrivateModule {
   private final PreferencesService preferencesService;
   private final ProgramRuntimeProviderLoader programRuntimeProviderLoader;
   private final ArtifactRepositoryReaderProvider artifactRepositoryReaderProvider;
+  private final ArtifactRepositoryProvider artifactRepositoryProvider;
   private final PluginFinderProvider pluginFinderProvider;
   private final PreferencesFetcherProvider preferencesFetcherProvider;
   private final MessagingService messagingService;
 
   @Inject
-  PreviewRunnerModule(ArtifactRepositoryReaderProvider readerProvider, ArtifactStore artifactStore,
+  PreviewRunnerModule(ArtifactRepositoryReaderProvider readerProvider,
+                      ArtifactRepositoryProvider repositoryProvider,
+                      ArtifactStore artifactStore,
                       AccessControllerInstantiator accessControllerInstantiator,
                       AccessEnforcer accessEnforcer,
                       ContextAccessEnforcer contextAccessEnforcer,
@@ -107,6 +112,7 @@ public class PreviewRunnerModule extends PrivateModule {
                       PreferencesFetcherProvider preferencesFetcherProvider,
                       MessagingService messagingService) {
     this.artifactRepositoryReaderProvider = readerProvider;
+    this.artifactRepositoryProvider = repositoryProvider;
     this.artifactStore = artifactStore;
     this.accessControllerInstantiator = accessControllerInstantiator;
     this.accessEnforcer = accessEnforcer;
@@ -123,12 +129,12 @@ public class PreviewRunnerModule extends PrivateModule {
   protected void configure() {
     bind(ArtifactRepositoryReader.class).toProvider(artifactRepositoryReaderProvider);
 
-    bind(ArtifactRepository.class).to(DefaultArtifactRepository.class);
+    bind(ArtifactRepository.class).to(RemoteArtifactRepository.class);
     expose(ArtifactRepository.class);
 
     bind(ArtifactRepository.class)
       .annotatedWith(Names.named(AppFabricServiceRuntimeModule.NOAUTH_ARTIFACT_REPO))
-      .to(DefaultArtifactRepository.class)
+      .to(RemoteArtifactRepository.class)
       .in(Scopes.SINGLETON);
     expose(ArtifactRepository.class)
       .annotatedWith(Names.named(AppFabricServiceRuntimeModule.NOAUTH_ARTIFACT_REPO));

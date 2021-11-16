@@ -82,6 +82,8 @@ public final class LocalArtifactManager extends AbstractArtifactManager {
   @Override
   protected Location getArtifactLocation(ArtifactInfo artifactInfo,
                                          @Nullable String artifactNamespace) throws IOException {
+    System.out.println("wyzhang: LocalArtifactManager getArtifactLocation");
+    new Throwable().printStackTrace();
     NamespaceId namespace;
     if (ArtifactScope.SYSTEM.equals(artifactInfo.getScope())) {
       namespace = NamespaceId.SYSTEM;

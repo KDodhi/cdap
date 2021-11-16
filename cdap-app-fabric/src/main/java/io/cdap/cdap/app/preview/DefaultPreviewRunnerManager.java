@@ -117,9 +117,9 @@ public class DefaultPreviewRunnerManager extends AbstractIdleService implements 
 
   @Override
   protected void startUp() throws Exception {
-    Injector previewInjector = createPreviewInjector();
+    Injector previewRunnerInjector = createPreviewRunnerInjector();
     // Starts common services
-    runner = previewInjector.getInstance(PreviewRunner.class);
+    runner = previewRunnerInjector.getInstance(PreviewRunner.class);
     if (runner instanceof Service) {
       ((Service) runner).startAndWait();
     }
@@ -167,7 +167,7 @@ public class DefaultPreviewRunnerManager extends AbstractIdleService implements 
    * Create injector for the given application id.
    */
   @VisibleForTesting
-  Injector createPreviewInjector() {
+  Injector createPreviewRunnerInjector() {
     return Guice.createInjector(
       new ConfigModule(previewCConf, previewHConf, previewSConf),
       new IOModule(),
