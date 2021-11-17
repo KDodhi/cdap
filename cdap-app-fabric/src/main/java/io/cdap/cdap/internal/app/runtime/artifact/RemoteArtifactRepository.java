@@ -215,7 +215,11 @@ public class RemoteArtifactRepository implements ArtifactRepository {
 
   @Override
   public ArtifactDetail getArtifact(Id.Artifact artifactId) throws Exception {
-    return artifactRepositoryReader.getArtifact(artifactId);
+    ArtifactDetail artifactDetail = artifactRepositoryReader.getArtifact(artifactId);
+    ArtifactId id = new ArtifactId(artifactId.getNamespace().getId(),
+                                   artifactId.getName(),
+                                   artifactId.getVersion().getVersion());
+    return localizeArtifactDetail(artifactDetail, localizedArtifact(id));
   }
 
   @Override
@@ -229,13 +233,20 @@ public class RemoteArtifactRepository implements ArtifactRepository {
     return artifactRepositoryReader.getArtifactDetails(range, limit, order);
   }
 
+  private ArtifactDetail localizeArtifactDetail(ArtifactDetail artifactDetail, Location localizedLocation) {
+    return new ArtifactDetail(new ArtifactDescriptor(artifactDetail.getDescriptor().getNamespace(),
+                                                     artifactDetail.getDescriptor().getArtifactId(),
+                                                     localizedLocation),
+                              artifactDetail.getMeta());
+  }
+
   private Location localizedArtifact(ArtifactId artifactId) throws IOException {
     // If ArtifactLocalizerClient is set, use it to get the cached location of artifact.
     if (artifactLocalizerClient != null) {
       try {
         // Always request for the unpacked version since the artifaction location is used for creation of
         // artifact ClassLoader only.
-        return Locations.toLocation(artifactLocalizerClient.getUnpackedArtifactLocation(artifactId));
+        return Locations.toLocation(artifactLocalizerClient.getArtifactLocation(artifactId));
       } catch (ArtifactNotFoundException e) {
         throw new IOException(String.format("Artifact %s is not found", artifactId), e);
       }
@@ -243,7 +254,7 @@ public class RemoteArtifactRepository implements ArtifactRepository {
 
     HttpRequest.Builder requestBuilder =
       remoteClientInternal.requestBuilder(
-        HttpMethod.GET, String.format("namespaces/%s/artifacts/%s/versions/%s/location",
+        HttpMethod.GET, String.format("namespaces/%s/artifacts/%s/versions/%s?unpack=false",
                                       artifactId.getNamespace(),
                                       artifactId.getArtifact(),
                                       artifactId.getVersion()));
