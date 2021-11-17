@@ -59,6 +59,7 @@ import io.cdap.cdap.internal.app.runtime.artifact.RemoteArtifactRepository;
 import io.cdap.cdap.internal.app.runtime.workflow.BasicWorkflowStateWriter;
 import io.cdap.cdap.internal.app.runtime.workflow.WorkflowStateWriter;
 import io.cdap.cdap.internal.app.store.DefaultStore;
+import io.cdap.cdap.internal.app.worker.RemoteWorkerPluginFinder;
 import io.cdap.cdap.internal.capability.CapabilityReader;
 import io.cdap.cdap.internal.capability.CapabilityStatusStore;
 import io.cdap.cdap.internal.pipeline.SynchronousPipelineFactory;
@@ -212,7 +213,8 @@ public class PreviewRunnerModule extends PrivateModule {
     bind(OwnerAdmin.class).to(DefaultOwnerAdmin.class);
     expose(OwnerAdmin.class);
 
-    bind(PluginFinder.class).toProvider(pluginFinderProvider);
+//    bind(PluginFinder.class).toProvider(pluginFinderProvider);
+    bind(PluginFinder.class).to(RemoteWorkerPluginFinder.class);
     expose(PluginFinder.class);
 
     bind(PreferencesFetcher.class).toProvider(preferencesFetcherProvider);
