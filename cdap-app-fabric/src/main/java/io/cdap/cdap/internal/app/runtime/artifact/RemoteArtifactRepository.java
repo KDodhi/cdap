@@ -47,6 +47,8 @@ import io.cdap.common.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.twill.filesystem.Location;
 import org.apache.twill.filesystem.LocationFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,6 +64,8 @@ import javax.annotation.Nullable;
  * RemoteArtifactRepository provides a remote implementation of ArtifactRepository
  */
 public class RemoteArtifactRepository implements ArtifactRepository {
+  private static final Logger LOG = LoggerFactory.getLogger(RemoteArtifactRepository.class);
+
   private final LocationFactory locationFactory;
   private final ArtifactRepositoryReader artifactRepositoryReader;
   private final ArtifactClassLoaderFactory artifactClassLoaderFactory;
@@ -241,6 +245,8 @@ public class RemoteArtifactRepository implements ArtifactRepository {
   }
 
   private Location localizedArtifact(ArtifactId artifactId) throws IOException {
+    LOG.debug("wyzhang: localizeArtifact: {}", artifactId);
+
     // If ArtifactLocalizerClient is set, use it to get the cached location of artifact.
     if (artifactLocalizerClient != null) {
       try {
