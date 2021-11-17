@@ -22,6 +22,7 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
+import com.google.inject.multibindings.OptionalBinder;
 import com.google.inject.name.Names;
 import io.cdap.cdap.app.deploy.Configurator;
 import io.cdap.cdap.app.deploy.Manager;
@@ -60,6 +61,7 @@ import io.cdap.cdap.internal.app.runtime.workflow.BasicWorkflowStateWriter;
 import io.cdap.cdap.internal.app.runtime.workflow.WorkflowStateWriter;
 import io.cdap.cdap.internal.app.store.DefaultStore;
 import io.cdap.cdap.internal.app.worker.RemoteWorkerPluginFinder;
+import io.cdap.cdap.internal.app.worker.sidecar.ArtifactLocalizerClient;
 import io.cdap.cdap.internal.capability.CapabilityReader;
 import io.cdap.cdap.internal.capability.CapabilityStatusStore;
 import io.cdap.cdap.internal.pipeline.SynchronousPipelineFactory;
@@ -221,6 +223,8 @@ public class PreviewRunnerModule extends PrivateModule {
     expose(PreferencesFetcher.class);
 
     bind(CapabilityReader.class).to(CapabilityStatusStore.class);
+
+    OptionalBinder.newOptionalBinder(binder(), ArtifactLocalizerClient.class);
   }
 
   /**
