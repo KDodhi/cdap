@@ -29,6 +29,7 @@ import io.cdap.cdap.common.conf.SConfiguration;
 import io.cdap.cdap.common.discovery.ResolvingDiscoverable;
 import io.cdap.cdap.common.discovery.URIScheme;
 import io.cdap.cdap.common.http.CommonNettyHttpServiceBuilder;
+import io.cdap.cdap.common.http.FlowControlChannelHandler;
 import io.cdap.cdap.common.logging.LoggingContextAccessor;
 import io.cdap.cdap.common.logging.ServiceLoggingContext;
 import io.cdap.cdap.common.metrics.MetricsReporterHook;
@@ -43,8 +44,10 @@ import io.cdap.cdap.spi.data.transaction.TransactionRunner;
 import io.cdap.cdap.spi.data.transaction.TransactionRunners;
 import io.cdap.cdap.spi.data.transaction.TxCallable;
 import io.cdap.cdap.store.DefaultNamespaceStore;
+import io.cdap.http.ChannelPipelineModifier;
 import io.cdap.http.HttpHandler;
 import io.cdap.http.NettyHttpService;
+import io.netty.channel.ChannelPipeline;
 import org.apache.twill.common.Cancellable;
 import org.apache.twill.discovery.DiscoveryService;
 import org.slf4j.Logger;
@@ -152,9 +155,16 @@ public class AppFabricServer extends AbstractIdleService {
       .map(name -> new MetricsReporterHook(metricsCollectionService, name))
       .collect(Collectors.toList());
 
+    LOG.error(">>>>>>> SETTING UP APP FABRIC SERVER");
     // Run http service on random port
     NettyHttpService.Builder httpServiceBuilder = new CommonNettyHttpServiceBuilder(cConf,
                                                                                     Constants.Service.APP_FABRIC_HTTP)
+      .setChannelPipelineModifier(new ChannelPipelineModifier() {
+        @Override
+        public void modify(ChannelPipeline pipeline) {
+          pipeline.addLast(new FlowControlChannelHandler());
+        }
+      })
       .setHost(hostname.getCanonicalHostName())
       .setHandlerHooks(handlerHooks)
       .setHttpHandlers(handlers)

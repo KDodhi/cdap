@@ -42,6 +42,7 @@ public class AuthenticationChannelHandler extends ChannelInboundHandlerAdapter {
   private String currentUserId;
   private Credential currentUserCredential;
   private String currentUserIP;
+  private boolean canPass = false;
 
   public AuthenticationChannelHandler(boolean enforceAuthenticatedRequests) {
     this.enforceAuthenticatedRequests = enforceAuthenticatedRequests;
@@ -54,7 +55,15 @@ public class AuthenticationChannelHandler extends ChannelInboundHandlerAdapter {
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
     SecurityRequestContext.reset();
+    LOG.error(">>>>>> Entering channelRead");
     if (msg instanceof HttpRequest) {
+      LOG.error(">>>>>>> " + ((HttpRequest) msg).uri());
+      if (((HttpRequest) msg).uri().contains("/start")) {
+        canPass = !canPass;
+        if (!canPass) {
+          throw new IllegalArgumentException(">>>>>>>>>> Cannot pass;");
+        }
+      }
       // TODO: authenticate the user using user id - CDAP-688
       HttpRequest request = (HttpRequest) msg;
       currentUserId = request.headers().get(Constants.Security.Headers.USER_ID);
