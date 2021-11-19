@@ -29,6 +29,11 @@
   <artifactId>cdap-api</artifactId>
   <name>CDAP API</name>
   <packaging>jar</packaging>
+  <properties>
+    <!-- Workaround for bug http://jira.codehaus.org/browse/MRESOURCES-99 -->
+    <project.info.buildtime>${maven.build.timestamp}</project.info.buildtime>
+    <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss.SSSZ</maven.build.timestamp.format>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -66,4 +71,38 @@
     </dependency>
   </dependencies>
 
+  <build>
+    <!-- Resource filtering for non xml files only -->
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <excludes>
+          <exclude>**/*.xml</exclude>
+        </excludes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+        <includes>
+          <include>**/*.xml</include>
+        </includes>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.4</version>
+        <executions>
+          <execution>
+            <id>test-jar</id>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>
