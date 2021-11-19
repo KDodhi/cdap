@@ -112,10 +112,17 @@ public final class PlatformInfo {
               idx = endIdx + 1;
               String suffix = version.substring(idx);
               snapshot = suffix.startsWith("SNAPSHOT");
-              if ((snapshot) && (suffix.length() > ("SNAPSHOT".length()+1))) {
-                suffix = suffix.substring("SNAPSHOT".length() + 1);
+              if (snapshot) {
+                if (suffix.length() > ("SNAPSHOT".length() + 1)) {
+                  suffix = suffix.substring("SNAPSHOT".length() + 1);
+                } else {
+                  suffix = "";
+                }
+              }
+              if (!suffix.equals("")) {
                 buildTime = Long.parseLong(suffix);
               }
+
             } else {
               //Release version style = Major.Min.Fix
               //Build time set to max to ensure it's after any other
