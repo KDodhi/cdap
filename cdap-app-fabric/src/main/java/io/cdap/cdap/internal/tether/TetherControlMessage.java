@@ -29,12 +29,14 @@ public class TetherControlMessage {
     KEEPALIVE,
     RUN_PIPELINE
   }
+
   private final Type type;
   private final byte[] payload;
 
   public TetherControlMessage(Type type) {
     this(type, new byte[0]);
   }
+
   public TetherControlMessage(Type type, byte[] payload) {
     this.type = type;
     this.payload = payload;
