@@ -211,6 +211,21 @@ public class TetherServerHandlerTest {
     Assert.assertEquals(HttpResponseStatus.NOT_FOUND.code(), response.getResponseCode());
   }
 
+  @Test
+  public void testInvalidAction() throws IOException {
+    // Create tethering
+    createTether("xyz", NAMESPACES);
+
+    // Perform invalid action, should get BAD_REQUEST error
+    HttpRequest request = HttpRequest.builder(HttpMethod.POST,
+                                              config.resolveURL("tethering/connections/xyz?action=foo")).build();
+    HttpResponse response = HttpRequests.execute(request);
+    Assert.assertEquals(HttpResponseStatus.BAD_REQUEST.code(), response.getResponseCode());
+
+    // Delete tethering
+    deleteTether();
+  }
+
   private void expectTetherControlResponse(String peerName, HttpResponseStatus status) throws IOException {
 
     HttpRequest.Builder builder = HttpRequest.builder(HttpMethod.GET,

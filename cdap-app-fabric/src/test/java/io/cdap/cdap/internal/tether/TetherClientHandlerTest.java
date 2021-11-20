@@ -19,6 +19,7 @@ package io.cdap.cdap.internal.tether;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Service;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
@@ -153,12 +154,13 @@ public class TetherClientHandlerTest {
           .build()).build();
 
     remoteAgentService = new RemoteAgentService(cConf, injector.getInstance(TransactionRunner.class));
-    remoteAgentService.startUp();
+    Assert.assertEquals(Service.State.RUNNING, remoteAgentService.startAndWait());
   }
 
   @After
   public void tearDown() throws Exception {
-    remoteAgentService.shutDown();
+    Assert.assertEquals(Service.State.TERMINATED, remoteAgentService.stopAndWait());
+
   }
 
   @Test

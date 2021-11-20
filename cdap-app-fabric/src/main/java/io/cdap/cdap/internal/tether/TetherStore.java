@@ -75,15 +75,14 @@ public class TetherStore {
    *
    * @param peerName name of the peer
    * @param tetherStatus status of tether with the peer
-   * @param lastConnectionTime last timestamp we successfully connected to the peer
    * @throws IOException if updating the table fails
    */
-  public void updatePeer(String peerName, TetherStatus tetherStatus, long lastConnectionTime) {
+    public void updatePeerStatusAndTimestamp(String peerName, TetherStatus tetherStatus) {
     TransactionRunners.run(transactionRunner, context -> {
       Collection<Field<?>> fields = new ArrayList<>();
       fields.add(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
       fields.add(Fields.stringField(StoreDefinition.TetherStore.TETHER_STATE_FIELD, tetherStatus.toString()));
-      fields.add(Fields.longField(StoreDefinition.TetherStore.LAST_CONNECTION_TIME_FIELD, lastConnectionTime));
+      fields.add(Fields.longField(StoreDefinition.TetherStore.LAST_CONNECTION_TIME_FIELD, System.currentTimeMillis()));
       StructuredTable tetherTable = context.getTable(StoreDefinition.TetherStore.TETHER);
       tetherTable.update(fields);
     });
@@ -96,7 +95,7 @@ public class TetherStore {
    * @param tetherStatus status of tether with the peer
    * @throws IOException if updating the table fails
    */
-    public void updatePeer(String peerName, TetherStatus tetherStatus) {
+  public void updatePeerStatus(String peerName, TetherStatus tetherStatus) {
     TransactionRunners.run(transactionRunner, context -> {
       Collection<Field<?>> fields = new ArrayList<>();
       fields.add(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
@@ -107,17 +106,16 @@ public class TetherStore {
   }
 
   /**
-   * Updates tether status for a peer.
+   * Updates the last connection timestamp for the peer.
    *
    * @param peerName name of the peer
-   * @param lastConnectionTime last timestamp we successfully connected to the peer
    * @throws IOException if updating the table fails
    */
-  public void updatePeer(String peerName, long lastConnectionTime) {
+  public void updatePeerTimestamp(String peerName) {
     TransactionRunners.run(transactionRunner, context -> {
       Collection<Field<?>> fields = new ArrayList<>();
       fields.add(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
-      fields.add(Fields.longField(StoreDefinition.TetherStore.LAST_CONNECTION_TIME_FIELD, lastConnectionTime));
+      fields.add(Fields.longField(StoreDefinition.TetherStore.LAST_CONNECTION_TIME_FIELD, System.currentTimeMillis()));
       StructuredTable tetherTable = context.getTable(StoreDefinition.TetherStore.TETHER);
       tetherTable.update(fields);
     });

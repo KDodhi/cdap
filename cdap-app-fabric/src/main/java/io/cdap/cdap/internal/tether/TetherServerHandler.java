@@ -105,7 +105,7 @@ public class TetherServerHandler extends AbstractHttpHandler {
     throws IOException, NotImplementedException {
     checkTetherServerEnabled();
 
-    store.updatePeer(peer, System.currentTimeMillis());
+    store.updatePeerTimestamp(peer);
     TetherStatus tetherStatus = store.getPeer(peer).getTetherStatus();
     if (tetherStatus == TetherStatus.PENDING) {
       responder.sendStatus(HttpResponseStatus.NOT_FOUND);
@@ -241,7 +241,7 @@ public class TetherServerHandler extends AbstractHttpHandler {
     checkTetherServerEnabled();
     PeerInfo peerInfo = store.getPeer(peer);
     if (peerInfo.getTetherStatus() == TetherStatus.PENDING) {
-      store.updatePeer(peerInfo.getName(), newStatus);
+      store.updatePeerStatus(peerInfo.getName(), newStatus);
     } else {
       LOG.info("Cannot update tether state to {} as current state state is {}",
                newStatus, peerInfo.getTetherStatus());

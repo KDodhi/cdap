@@ -16,7 +16,7 @@
 
 package io.cdap.cdap.internal.tether;
 
-import com.google.common.util.concurrent.AbstractIdleService;
+import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.cdap.cdap.common.conf.CConfiguration;
@@ -24,7 +24,6 @@ import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.spi.data.transaction.TransactionRunner;
 import io.cdap.common.http.HttpMethod;
 import io.cdap.common.http.HttpResponse;
-import org.apache.twill.common.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,8 +34,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
@@ -44,103 +41,99 @@ import javax.inject.Inject;
 /**
  * The main class to run the remote agent service.
  */
-public class RemoteAgentService extends AbstractIdleService {
+public class RemoteAgentService extends AbstractScheduledService {
   private static final Logger LOG = LoggerFactory.getLogger(RemoteAgentService.class);
   private static final Gson GSON = new Gson();
   public static final String CONNECT_CONTROL_CHANNEL = "/v3/tethering/controlchannels/";
 
   private final CConfiguration cConf;
   private final TetherStore store;
-  private String instanceName;
-  private ScheduledExecutorService executorService;
+  private final String instanceName;
 
   @Inject
   public RemoteAgentService(CConfiguration cConf, TransactionRunner transactionRunner) {
     this.cConf = cConf;
     this.store = new TetherStore(transactionRunner);
+    this.instanceName = cConf.get(Constants.INSTANCE_NAME);
   }
 
   @Override
-  protected void startUp() throws Exception {
-    instanceName = cConf.get(Constants.INSTANCE_NAME);
+  protected Scheduler scheduler() {
     int connectionInterval = cConf.getInt(Constants.Tether.CONNECT_INTERVAL,
                                           Constants.Tether.CONNECT_INTERVAL_DEFAULT);
-    executorService = Executors
-      .newSingleThreadScheduledExecutor(Threads.createDaemonThreadFactory("tether-control-channel"));
-    executorService.scheduleWithFixedDelay(
-      () -> {
-        List<PeerInfo> peers;
-        try {
-          peers = store.getPeers().stream()
-            // Ignore peers in REJECTED state.
-            .filter(p -> p.getTetherStatus() != TetherStatus.REJECTED)
-            .collect(Collectors.toList());
-        } catch (IOException e) {
-          LOG.warn("Failed to get peer information", e);
-          return;
-        }
-        for (PeerInfo peer : peers) {
-          try {
-            HttpResponse resp = TetherUtils.sendHttpRequest(HttpMethod.GET, new URI(peer.getEndpoint())
-              .resolve(CONNECT_CONTROL_CHANNEL + instanceName));
-            switch (resp.getResponseCode()) {
-              case HttpURLConnection.HTTP_OK:
-                TetherStatus peerStatus = store.getTetherStatus(peer.getName());
-                 if (peerStatus == TetherStatus.PENDING) {
-                  LOG.debug("Peer {} transitioned to ACCEPTED state", peer.getName());
-                  store.updatePeer(peer.getName(), TetherStatus.ACCEPTED);
-                }
-                // Update last connection timestamp.
-                store.updatePeer(peer.getName(), System.currentTimeMillis());
-                processTetherControlMessage(resp.getResponseBodyAsString(StandardCharsets.UTF_8), peer);
-                break;
-              case HttpURLConnection.HTTP_NOT_FOUND:
-                // Update last connection timestamp.
-                store.updatePeer(peer.getName(), System.currentTimeMillis());
-
-                TetherConnectionRequest tetherRequest = new TetherConnectionRequest(instanceName,
-                                                                                    peer.getMetadata()
-                                                                                      .getNamespaceAllocations());
-                try {
-                  HttpResponse response = TetherUtils.sendHttpRequest(HttpMethod.POST,
-                                                                      new URI(peer.getEndpoint())
-                                                                        .resolve(TetherClientHandler.CREATE_TETHER),
-                                                                      GSON.toJson(tetherRequest));
-                  if (response.getResponseCode() != 200) {
-                    LOG.error("Failed to initiate tether with peer {}, response body: {}, code: {}",
-                              peer.getName(), response.getResponseBody(), response.getResponseCode());
-                  }
-                } catch (URISyntaxException | IOException e) {
-                  LOG.error("Failed to send tether request to peer {}, endpoint {}",
-                            peer.getName(), peer.getEndpoint());
-                }
-                break;
-              case HttpURLConnection.HTTP_FORBIDDEN:
-                // Server rejected tethering
-                TetherStatus tetherStatus = store.getTetherStatus(peer.getName());
-                if (tetherStatus != TetherStatus.PENDING) {
-                  LOG.debug("Ignoring tethering rejection message from {}, current state: {}", peer.getName(),
-                            store.getTetherStatus(peer.getName()));
-                  break;
-                }
-                // Set tether status to rejected and update last connection timestamp.
-                store.updatePeer(peer.getName(), TetherStatus.REJECTED, System.currentTimeMillis());
-                break;
-              default:
-                LOG.error("Peer {} returned unexpected error code {} body {}",
-                          peer.getName(), resp.getResponseCode(),
-                          resp.getResponseBodyAsString(StandardCharsets.UTF_8));
-            }
-          } catch (Exception e) {
-            LOG.debug("Failed to create control channel to {}", peer, e);
-          }
-        }
-      }, connectionInterval, connectionInterval, TimeUnit.SECONDS);
+    // Try right away if there's anything to cleanup, we will then schedule based on the minimum retention interval
+    return Scheduler.newFixedRateSchedule(connectionInterval, connectionInterval, TimeUnit.SECONDS);
   }
 
   @Override
-  protected void shutDown() throws Exception {
-    executorService.shutdown();
+  protected void runOneIteration() {
+    List<PeerInfo> peers;
+    try {
+      peers = store.getPeers().stream()
+        // Ignore peers in REJECTED state.
+        .filter(p -> p.getTetherStatus() != TetherStatus.REJECTED)
+        .collect(Collectors.toList());
+    } catch (IOException e) {
+      LOG.warn("Failed to get peer information", e);
+      return;
+    }
+    for (PeerInfo peer : peers) {
+      try {
+        HttpResponse resp = TetherUtils.sendHttpRequest(HttpMethod.GET, new URI(peer.getEndpoint())
+          .resolve(CONNECT_CONTROL_CHANNEL + instanceName));
+        switch (resp.getResponseCode()) {
+          case HttpURLConnection.HTTP_OK:
+            TetherStatus peerStatus = store.getTetherStatus(peer.getName());
+            if (peerStatus == TetherStatus.PENDING) {
+              LOG.debug("Peer {} transitioned to ACCEPTED state", peer.getName());
+              store.updatePeerStatusAndTimestamp(peer.getName(), TetherStatus.ACCEPTED);
+            } else {
+              // Update last connection timestamp.
+              store.updatePeerTimestamp(peer.getName());
+            }
+            processTetherControlMessage(resp.getResponseBodyAsString(StandardCharsets.UTF_8), peer);
+            break;
+          case HttpURLConnection.HTTP_NOT_FOUND:
+            // Update last connection timestamp.
+            store.updatePeerTimestamp(peer.getName());
+
+            TetherConnectionRequest tetherRequest = new TetherConnectionRequest(instanceName,
+                                                                                peer.getMetadata()
+                                                                                  .getNamespaceAllocations());
+            try {
+              HttpResponse response = TetherUtils.sendHttpRequest(HttpMethod.POST,
+                                                                  new URI(peer.getEndpoint())
+                                                                    .resolve(TetherClientHandler.CREATE_TETHER),
+                                                                  GSON.toJson(tetherRequest));
+              if (response.getResponseCode() != 200) {
+                LOG.error("Failed to initiate tether with peer {}, response body: {}, code: {}",
+                          peer.getName(), response.getResponseBody(), response.getResponseCode());
+              }
+            } catch (URISyntaxException | IOException e) {
+              LOG.error("Failed to send tether request to peer {}, endpoint {}",
+                        peer.getName(), peer.getEndpoint());
+            }
+            break;
+          case HttpURLConnection.HTTP_FORBIDDEN:
+            // Server rejected tethering
+            TetherStatus tetherStatus = store.getTetherStatus(peer.getName());
+            if (tetherStatus != TetherStatus.PENDING) {
+              LOG.debug("Ignoring tethering rejection message from {}, current state: {}", peer.getName(),
+                        store.getTetherStatus(peer.getName()));
+              break;
+            }
+            // Set tether status to rejected.
+            store.updatePeerStatusAndTimestamp(peer.getName(), TetherStatus.REJECTED);
+            break;
+          default:
+            LOG.error("Peer {} returned unexpected error code {} body {}",
+                      peer.getName(), resp.getResponseCode(),
+                      resp.getResponseBodyAsString(StandardCharsets.UTF_8));
+        }
+      } catch (Exception e) {
+        LOG.debug("Failed to create control channel to {}", peer, e);
+      }
+    }
   }
 
   private void processTetherControlMessage(String message, PeerInfo peerInfo) {
