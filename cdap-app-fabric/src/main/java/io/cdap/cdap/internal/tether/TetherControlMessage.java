@@ -16,23 +16,26 @@
 
 package io.cdap.cdap.internal.tether;
 
-import com.google.gson.JsonElement;
-
 import java.util.Objects;
-import javax.annotation.Nullable;
 
 /**
  * Control messages sent from tether server to the client.
  */
 public class TetherControlMessage {
+  /**
+   * Control messages type.
+   */
   public enum Type {
     KEEPALIVE,
     RUN_PIPELINE
   }
-  private Type type;
-  @Nullable
-  private JsonElement payload;
-  public TetherControlMessage(Type type, @Nullable JsonElement payload) {
+  private final Type type;
+  private final byte[] payload;
+
+  public TetherControlMessage(Type type) {
+    this(type, new byte[0]);
+  }
+  public TetherControlMessage(Type type, byte[] payload) {
     this.type = type;
     this.payload = payload;
   }
@@ -41,7 +44,7 @@ public class TetherControlMessage {
     return type;
   }
 
-  public JsonElement getPayload() {
+  public byte[] getPayload() {
     return payload;
   }
 

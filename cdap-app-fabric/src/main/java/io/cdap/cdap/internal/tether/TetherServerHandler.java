@@ -61,6 +61,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.QueryParam;
 
 /**
  * {@link io.cdap.http.HttpHandler} to manage tethering server v3 REST APIs
@@ -93,26 +94,6 @@ public class TetherServerHandler extends AbstractHttpHandler {
   public void init(HandlerContext context) {
     super.init(context);
     initializeMessageIds();
-  }
-
-  private void initializeMessageIds() {
-    List<String> topics = store.getPeers().stream()
-      .filter(p -> p.getTetherStatus() == TetherStatus.ACCEPTED)
-      .map(PeerInfo::getName)
-      .collect(Collectors.toList());
-    lastMessageIds = new HashMap<>();
-    for (String topic: topics) {
-      TransactionRunners.run(transactionRunner, context -> {
-        String messageId = AppMetadataStore.create(context).retrieveSubscriberState(topic, SUBSCRIBER);
-        lastMessageIds.put(topic, messageId);
-      });
-    }
-  }
-
-  private void checkTetherServerEnabled() throws NotImplementedException {
-    if (!cConf.getBoolean(Constants.Tether.TETHER_SERVER_ENABLE, Constants.Tether.DEFAULT_TETHER_SERVER_ENABLE)) {
-      throw new NotImplementedException("Tethering is not enabled");
-    }
   }
 
   /**
@@ -161,7 +142,7 @@ public class TetherServerHandler extends AbstractHttpHandler {
     }
 
     if (commands.isEmpty()) {
-      commands.add(new TetherControlMessage(TetherControlMessage.Type.KEEPALIVE, null));
+      commands.add(new TetherControlMessage(TetherControlMessage.Type.KEEPALIVE));
     }
     Type type = new TypeToken<List<TetherControlMessage>>() { }.getType();
     responder.sendJson(HttpResponseStatus.OK, GSON.toJson(commands, type));
@@ -190,7 +171,7 @@ public class TetherServerHandler extends AbstractHttpHandler {
     }
 
     // We don't need to keep track of the client metadata on the server side.
-    PeerMetadata peerMetadata = new PeerMetadata(tetherRequest.getNamespaces(), Collections.emptyMap());
+    PeerMetadata peerMetadata = new PeerMetadata(tetherRequest.getNamespaceAllocations(), Collections.emptyMap());
     // We don't store the peer endpoint on the server side because the connection is initiated by the client.
     PeerInfo peerInfo = new PeerInfo(tetherRequest.getPeer(), null, TetherStatus.PENDING, peerMetadata);
     try {
@@ -207,23 +188,52 @@ public class TetherServerHandler extends AbstractHttpHandler {
   }
 
   /**
-   * Accepts the tethering request.
+   * Accepts/rejects the tethering request.
    */
   @POST
-  @Path("/tethering/connections/{peer}/accept")
-  public void acceptTether(HttpRequest request, HttpResponder responder, @PathParam("peer") String peer)
+  @Path("/tethering/connections/{peer}")
+  public void tetherAction(HttpRequest request, HttpResponder responder, @PathParam("peer") String peer,
+                           @QueryParam("action") String action)
     throws NotImplementedException, BadRequestException {
-    updateTetherStatus(responder, peer, TetherStatus.ACCEPTED);
+    TetherStatus tetherStatus;
+    switch (action) {
+      case "accept":
+        tetherStatus = TetherStatus.ACCEPTED;
+        break;
+      case "reject":
+        tetherStatus = TetherStatus.REJECTED;
+        break;
+      default:
+        throw new BadRequestException(String.format("Invalid action: %s", action));
+    }
+    updateTetherStatus(responder, peer, tetherStatus);
   }
 
-  /**
-   * Rejects the tethering request.
-   */
-  @POST
-  @Path("/tethering/connections/{peer}/reject")
-  public void rejectTether(HttpRequest request, HttpResponder responder, @PathParam("peer") String peer)
-    throws NotImplementedException, BadRequestException {
-    updateTetherStatus(responder, peer, TetherStatus.REJECTED);
+  private void initializeMessageIds() {
+    lastMessageIds = new HashMap<>();
+    List<String> topics;
+    try {
+      topics = store.getPeers().stream()
+        .filter(p -> p.getTetherStatus() == TetherStatus.ACCEPTED)
+        .map(PeerInfo::getName)
+        .collect(Collectors.toList());
+    } catch (IOException e) {
+      LOG.warn("Failed to get peer information", e);
+      return;
+    }
+
+    for (String topic: topics) {
+      TransactionRunners.run(transactionRunner, context -> {
+        String messageId = AppMetadataStore.create(context).retrieveSubscriberState(topic, SUBSCRIBER);
+        lastMessageIds.put(topic, messageId);
+      });
+    }
+  }
+
+  private void checkTetherServerEnabled() throws NotImplementedException {
+    if (!cConf.getBoolean(Constants.Tether.TETHER_SERVER_ENABLE, Constants.Tether.DEFAULT_TETHER_SERVER_ENABLE)) {
+      throw new NotImplementedException("Tethering is not enabled");
+    }
   }
 
   private void updateTetherStatus(HttpResponder responder, String peer, TetherStatus newStatus)

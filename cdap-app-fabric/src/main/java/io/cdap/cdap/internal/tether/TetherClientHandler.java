@@ -17,10 +17,9 @@
 package io.cdap.cdap.internal.tether;
 
 import com.google.gson.Gson;
+import io.cdap.cdap.common.BadRequestException;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
-import io.cdap.cdap.common.namespace.NamespaceAdmin;
-import io.cdap.cdap.proto.NamespaceMeta;
 import io.cdap.common.http.HttpMethod;
 import io.cdap.common.http.HttpResponse;
 import io.cdap.http.AbstractHttpHandler;
@@ -32,7 +31,6 @@ import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -47,18 +45,13 @@ public class TetherClientHandler extends AbstractHttpHandler {
   private static final Logger LOG = LoggerFactory.getLogger(TetherClientHandler.class);
   private static final Gson GSON = new Gson();
   static final String CREATE_TETHER = "/v3/tethering/connect";
-  // Following constants are same as defined in KubeMasterEnvironment
-  static final String NAMESPACE_CPU_LIMIT_PROPERTY = "k8s.namespace.cpu.limits";
-  static final String NAMESPACE_MEMORY_LIMIT_PROPERTY = "k8s.namespace.memory.limits";
 
   private final TetherStore store;
-  private final NamespaceAdmin namespaceAdmin;
   private final String instanceName;
 
   @Inject
-  TetherClientHandler(CConfiguration cConf, TetherStore store, NamespaceAdmin namespaceAdmin) {
+  TetherClientHandler(CConfiguration cConf, TetherStore store) {
     this.store = store;
-    this.namespaceAdmin = namespaceAdmin;
     this.instanceName = cConf.get(Constants.INSTANCE_NAME);
   }
 
@@ -82,20 +75,12 @@ public class TetherClientHandler extends AbstractHttpHandler {
       return;
     }
 
-    List<NamespaceAllocation> namespaceAllocations = new ArrayList<>();
-    for (String namespace : tetherCreationRequest.getNamespaces()) {
-      Optional<NamespaceMeta> namespaceMeta = namespaceAdmin.list().stream()
-      .filter(ns -> ns.getName().equals(namespace)).findFirst();
-      if (!namespaceMeta.isPresent()) {
-        LOG.error("Namespace {} does not exist", namespace);
-        throw new IllegalArgumentException(String.format("Namespace {} does not exist", namespace));
-      }
-      String cpuLimit = namespaceMeta.get().getConfig().getConfig(NAMESPACE_CPU_LIMIT_PROPERTY);
-      String memoryLimit = namespaceMeta.get().getConfig().getConfig(NAMESPACE_MEMORY_LIMIT_PROPERTY);
-      namespaceAllocations.add(new NamespaceAllocation(namespace, cpuLimit, memoryLimit));
-    }
+    List<NamespaceAllocation> namespaces = tetherCreationRequest.getNamespaceAllocations();
     TetherConnectionRequest tetherConnectionRequest = new TetherConnectionRequest(instanceName,
-                                                                                  namespaceAllocations);
+                                                                                  namespaces);
+    if (tetherCreationRequest.getEndpoint() == null) {
+      throw new BadRequestException("Endpoint is null");
+    }
     URI endpoint = new URI(tetherCreationRequest.getEndpoint());
     HttpResponse response = TetherUtils.sendHttpRequest(HttpMethod.POST, endpoint.resolve(CREATE_TETHER),
                                                         GSON.toJson(tetherConnectionRequest));
@@ -106,7 +91,7 @@ public class TetherClientHandler extends AbstractHttpHandler {
       return;
     }
 
-    PeerMetadata peerMetadata = new PeerMetadata(namespaceAllocations, tetherCreationRequest.getMetadata());
+    PeerMetadata peerMetadata = new PeerMetadata(namespaces, tetherCreationRequest.getMetadata());
     PeerInfo peerInfo = new PeerInfo(tetherCreationRequest.getPeer(), tetherCreationRequest.getEndpoint(),
                                      TetherStatus.PENDING, peerMetadata);
     store.addPeer(peerInfo);

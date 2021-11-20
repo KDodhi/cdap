@@ -28,15 +28,15 @@ public class TetherCreationRequest {
   // Server endpoint
   private final String endpoint;
   // CDAP namespaces
-  private final List<String> namespaces;
+  private final List<NamespaceAllocation> namespaceAllocations;
   // Metadata associated with this tether
   private final Map<String, String> metadata;
 
   public TetherCreationRequest(String peer, String endpoint,
-                               List<String> namespaces, Map<String, String> metadata) {
+                               List<NamespaceAllocation> namespaceAllocations, Map<String, String> metadata) {
     this.peer = peer;
     this.endpoint = endpoint;
-    this.namespaces = namespaces;
+    this.namespaceAllocations = namespaceAllocations;
     this.metadata = metadata;
   }
 
@@ -48,8 +48,8 @@ public class TetherCreationRequest {
     return endpoint;
   }
 
-  public List<String> getNamespaces() {
-    return namespaces;
+  public List<NamespaceAllocation> getNamespaceAllocations() {
+    return namespaceAllocations;
   }
 
   public Map<String, String> getMetadata() {

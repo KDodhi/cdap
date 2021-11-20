@@ -248,11 +248,11 @@ public class TetherServerHandlerTest {
   }
 
   private void acceptTether() throws IOException {
-    doHttpRequest(HttpMethod.POST, "tethering/connections/xyz/accept");
+    doHttpRequest(HttpMethod.POST, "tethering/connections/xyz?action=accept");
   }
 
   private void rejectTether() throws IOException {
-    doHttpRequest(HttpMethod.POST, "tethering/connections/xyz/reject");
+    doHttpRequest(HttpMethod.POST, "tethering/connections/xyz?action=reject");
   }
 
   private String doHttpRequest(HttpMethod method, String endpoint, @Nullable String body) throws IOException {

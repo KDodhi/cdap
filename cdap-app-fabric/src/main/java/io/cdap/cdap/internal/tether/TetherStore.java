@@ -21,7 +21,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 import io.cdap.cdap.api.dataset.lib.CloseableIterator;
-import io.cdap.cdap.common.NotFoundException;
 import io.cdap.cdap.spi.data.StructuredRow;
 import io.cdap.cdap.spi.data.StructuredTable;
 import io.cdap.cdap.spi.data.table.field.Field;
@@ -54,7 +53,7 @@ public class TetherStore {
    * Adds a peer.
    *
    * @param peerInfo peer information
-   * @throws IOException
+   * @throws IOException if inserting into the table fails
    */
   public void addPeer(PeerInfo peerInfo) {
     TransactionRunners.run(transactionRunner, context -> {
@@ -77,7 +76,7 @@ public class TetherStore {
    * @param peerName name of the peer
    * @param tetherStatus status of tether with the peer
    * @param lastConnectionTime last timestamp we successfully connected to the peer
-   * @throws IOException
+   * @throws IOException if updating the table fails
    */
   public void updatePeer(String peerName, TetherStatus tetherStatus, long lastConnectionTime) {
     TransactionRunners.run(transactionRunner, context -> {
@@ -95,7 +94,7 @@ public class TetherStore {
    *
    * @param peerName name of the peer
    * @param tetherStatus status of tether with the peer
-   * @throws IOException
+   * @throws IOException if updating the table fails
    */
     public void updatePeer(String peerName, TetherStatus tetherStatus) {
     TransactionRunners.run(transactionRunner, context -> {
@@ -112,7 +111,7 @@ public class TetherStore {
    *
    * @param peerName name of the peer
    * @param lastConnectionTime last timestamp we successfully connected to the peer
-   * @throws IOException
+   * @throws IOException if updating the table fails
    */
   public void updatePeer(String peerName, long lastConnectionTime) {
     TransactionRunners.run(transactionRunner, context -> {
@@ -128,7 +127,7 @@ public class TetherStore {
    * Deletes a peer
    *
    * @param peerName name of the peer
-   * @throws IOException
+   * @throws IOException if deleting the table fails
    */
   public void deletePeer(String peerName) {
     TransactionRunners.run(transactionRunner, context -> {
@@ -142,9 +141,9 @@ public class TetherStore {
    * Get information about all tethered peers
    *
    * @return information about status of tethered peer
-   * @throws IOException
+   * @throws IOException if reading from the database fails
    */
-  public List<PeerInfo> getPeers() {
+  public List<PeerInfo> getPeers() throws IOException {
     List<PeerInfo> peers = new ArrayList<>();
     return TransactionRunners.run(transactionRunner, context -> {
       StructuredTable tetherTable = context
@@ -168,7 +167,8 @@ public class TetherStore {
    * Get information about a peer
    *
    * @return information about status of a peer
-   * @throws IOException, NotFoundException
+   * @throws IOException if reading from the database fails
+   * @throws PeerNotFoundException if the peer is not found
    */
   public PeerInfo getPeer(String peerName) {
     return TransactionRunners.run(transactionRunner, context -> {
@@ -178,7 +178,7 @@ public class TetherStore {
         ImmutableList.of(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName)));
       try (CloseableIterator<StructuredRow> iterator = tetherTable.scan(range, Integer.MAX_VALUE)) {
         if (!iterator.hasNext()) {
-          throw new NotFoundException(peerName);
+          throw new PeerNotFoundException(peerName);
         }
         StructuredRow row = iterator.next();
         String endpoint = row.getString(StoreDefinition.TetherStore.PEER_URI_FIELD);
@@ -197,7 +197,8 @@ public class TetherStore {
    *
    * @param peerName name of the peer
    * @return tether status
-   * @throws IOException, NotFoundException
+   * @throws IOException if reading from the database fails
+   * @throws PeerNotFoundException if the peer is not found
    */
   public TetherStatus getTetherStatus(String peerName) {
     return TransactionRunners.run(transactionRunner, context -> {
@@ -207,7 +208,7 @@ public class TetherStore {
         ImmutableList.of(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName)));
       try (CloseableIterator<StructuredRow> iterator = tetherTable.scan(range, Integer.MAX_VALUE)) {
         if (!iterator.hasNext()) {
-          throw new NotFoundException(peerName);
+          throw new PeerNotFoundException(peerName);
         }
         return TetherStatus.valueOf(iterator.next().getString(StoreDefinition.TetherStore.TETHER_STATE_FIELD));
       }

@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -68,42 +69,38 @@ public class RemoteAgentService extends AbstractIdleService {
       .newSingleThreadScheduledExecutor(Threads.createDaemonThreadFactory("tether-control-channel"));
     executorService.scheduleWithFixedDelay(
       () -> {
-        List<PeerInfo> peers = store.getPeers().stream()
-          // Ignore peers in REJECTED state.
-          .filter(p -> p.getTetherStatus() != TetherStatus.REJECTED)
-          .collect(Collectors.toList());
+        List<PeerInfo> peers;
+        try {
+          peers = store.getPeers().stream()
+            // Ignore peers in REJECTED state.
+            .filter(p -> p.getTetherStatus() != TetherStatus.REJECTED)
+            .collect(Collectors.toList());
+        } catch (IOException e) {
+          LOG.warn("Failed to get peer information", e);
+          return;
+        }
         for (PeerInfo peer : peers) {
-          if (peer.getEndpoint() == null) {
-            // Should not happen
-            LOG.error("Peer {} does not have endpoint set", peer.getName());
-            continue;
-          }
           try {
             HttpResponse resp = TetherUtils.sendHttpRequest(HttpMethod.GET, new URI(peer.getEndpoint())
               .resolve(CONNECT_CONTROL_CHANNEL + instanceName));
             switch (resp.getResponseCode()) {
-              case 200:
+              case HttpURLConnection.HTTP_OK:
                 TetherStatus peerStatus = store.getTetherStatus(peer.getName());
                  if (peerStatus == TetherStatus.PENDING) {
-                  LOG.info("Peer {} transitioned to ACCEPTED state", peer.getName());
+                  LOG.debug("Peer {} transitioned to ACCEPTED state", peer.getName());
                   store.updatePeer(peer.getName(), TetherStatus.ACCEPTED);
                 }
                 // Update last connection timestamp.
                 store.updatePeer(peer.getName(), System.currentTimeMillis());
                 processTetherControlMessage(resp.getResponseBodyAsString(StandardCharsets.UTF_8), peer);
                 break;
-              case 404:
-                // Tether does not exist on the peer, create it.
-                if (peer.getEndpoint() == null) {
-                  LOG.warn("Peer {} endpoint is null", peer.getName());
-                  break;
-                }
+              case HttpURLConnection.HTTP_NOT_FOUND:
                 // Update last connection timestamp.
                 store.updatePeer(peer.getName(), System.currentTimeMillis());
 
                 TetherConnectionRequest tetherRequest = new TetherConnectionRequest(instanceName,
                                                                                     peer.getMetadata()
-                                                                                      .getNamespaces());
+                                                                                      .getNamespaceAllocations());
                 try {
                   HttpResponse response = TetherUtils.sendHttpRequest(HttpMethod.POST,
                                                                       new URI(peer.getEndpoint())
@@ -118,14 +115,12 @@ public class RemoteAgentService extends AbstractIdleService {
                             peer.getName(), peer.getEndpoint());
                 }
                 break;
-              case 403:
+              case HttpURLConnection.HTTP_FORBIDDEN:
                 // Server rejected tethering
                 TetherStatus tetherStatus = store.getTetherStatus(peer.getName());
                 if (tetherStatus != TetherStatus.PENDING) {
-                  if (tetherStatus != TetherStatus.REJECTED) {
-                    LOG.info("Ignoring tethering rejection message from {}, current state: {}", peer.getName(),
-                             store.getTetherStatus(peer.getName()));
-                  }
+                  LOG.debug("Ignoring tethering rejection message from {}, current state: {}", peer.getName(),
+                            store.getTetherStatus(peer.getName()));
                   break;
                 }
                 // Set tether status to rejected and update last connection timestamp.

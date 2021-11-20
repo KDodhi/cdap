@@ -55,7 +55,7 @@ public class MockTetherServerHandler extends AbstractHttpHandler {
       return;
     }
     List<TetherControlMessage> controlMessages = Collections.singletonList(
-      new TetherControlMessage(TetherControlMessage.Type.KEEPALIVE, null));
+      new TetherControlMessage(TetherControlMessage.Type.KEEPALIVE));
     responder.sendJson(responseStatus, GSON.toJson(controlMessages, type));
   }
 
@@ -65,7 +65,7 @@ public class MockTetherServerHandler extends AbstractHttpHandler {
     String content = request.content().toString(StandardCharsets.UTF_8);
     TetherConnectionRequest tetherRequest = GSON.fromJson(content, TetherConnectionRequest.class);
     Assert.assertEquals(TetherClientHandlerTest.CLIENT_INSTANCE, tetherRequest.getPeer());
-    Assert.assertEquals(TetherClientHandlerTest.NAMESPACES, tetherRequest.getNamespaces());
+    Assert.assertEquals(TetherClientHandlerTest.NAMESPACES, tetherRequest.getNamespaceAllocations());
     tetherCreated = true;
     responder.sendStatus(HttpResponseStatus.OK);
   }

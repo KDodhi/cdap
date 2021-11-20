@@ -24,16 +24,17 @@ import java.util.Objects;
  * Metadata about a tethered peer.
  */
 public class PeerMetadata {
-  private final List<NamespaceAllocation> namespaces;
+  private final List<NamespaceAllocation> namespaceAllocations;
+  // metadata associated with the peer. ex: project, region when peer is located
   private final Map<String, String> metadata;
 
-  public PeerMetadata(List<NamespaceAllocation> namespaces, Map<String, String> metadata) {
-    this.namespaces = namespaces;
+  public PeerMetadata(List<NamespaceAllocation> namespaceAllocations, Map<String, String> metadata) {
+    this.namespaceAllocations = namespaceAllocations;
     this.metadata = metadata;
   }
 
-  public List<NamespaceAllocation> getNamespaces() {
-    return namespaces;
+  public List<NamespaceAllocation> getNamespaceAllocations() {
+    return namespaceAllocations;
   }
 
   public Map<String, String> getMetadata() {
@@ -49,11 +50,11 @@ public class PeerMetadata {
       return false;
     }
     PeerMetadata that = (PeerMetadata) other;
-    return Objects.equals(this.namespaces, that.namespaces) && Objects.equals(this.metadata, that.metadata);
+    return Objects.equals(this.namespaceAllocations, that.namespaceAllocations) && Objects.equals(this.metadata, that.metadata);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(namespaces, metadata);
+    return Objects.hash(namespaceAllocations, metadata);
   }
 }

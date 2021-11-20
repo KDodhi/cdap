@@ -24,18 +24,18 @@ import java.util.List;
  */
 public class TetherConnectionRequest {
   private final String peer;
-  private final List<NamespaceAllocation> namespaces;
+  private final List<NamespaceAllocation> namespaceAllocations;
 
-  public TetherConnectionRequest(String peer, List<NamespaceAllocation> namespaces) {
+  public TetherConnectionRequest(String peer, List<NamespaceAllocation> namespaceAllocations) {
     this.peer = peer;
-    this.namespaces = namespaces;
+    this.namespaceAllocations = namespaceAllocations;
   }
 
   public String getPeer() {
     return peer;
   }
 
-  public List<NamespaceAllocation> getNamespaces() {
-    return namespaces;
+  public List<NamespaceAllocation> getNamespaceAllocations() {
+    return namespaceAllocations;
   }
 }

@@ -61,7 +61,7 @@ public class TetherUtils {
       default:
         throw new RuntimeException("Unexpected HTTP method: " + method);
     }
-    if (content != null) {
+    if (content != null && !content.isEmpty()) {
       builder.withBody(content);
     }
     // Add Authorization header.

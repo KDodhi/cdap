@@ -26,6 +26,7 @@ import io.cdap.http.HttpResponder;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
@@ -64,7 +65,7 @@ public class TetherHandler extends AbstractHttpHandler {
    */
   @GET
   @Path("/tethering/connections")
-  public void getTethers(HttpRequest request, HttpResponder responder) {
+  public void getTethers(HttpRequest request, HttpResponder responder) throws IOException {
     List<PeerStatus> peerStatusList = new ArrayList<>();
     for (PeerInfo peer : store.getPeers()) {
       peerStatusList.add(getPeerStatus(peer));
@@ -81,15 +82,6 @@ public class TetherHandler extends AbstractHttpHandler {
     responder.sendJson(HttpResponseStatus.OK, GSON.toJson(getPeerStatus(store.getPeer(peer))));
   }
 
-  private PeerStatus getPeerStatus(PeerInfo peerInfo) {
-    TetherConnectionStatus connectionStatus = TetherConnectionStatus.INACTIVE;
-    if (System.currentTimeMillis() - peerInfo.getLastConnectionTime() < connectionTimeout * 1000L) {
-      connectionStatus = TetherConnectionStatus.ACTIVE;
-    }
-    return new PeerStatus(peerInfo.getName(), peerInfo.getEndpoint(), peerInfo.getTetherStatus(),
-                          peerInfo.getMetadata(), connectionStatus);
-  }
-
   /**
    * Deletes a tether.
    */
@@ -100,5 +92,14 @@ public class TetherHandler extends AbstractHttpHandler {
     store.getPeer(peer);
     store.deletePeer(peer);
     responder.sendStatus(HttpResponseStatus.OK);
+  }
+
+  private PeerStatus getPeerStatus(PeerInfo peerInfo) {
+    TetherConnectionStatus connectionStatus = TetherConnectionStatus.INACTIVE;
+    if (System.currentTimeMillis() - peerInfo.getLastConnectionTime() < connectionTimeout * 1000L) {
+      connectionStatus = TetherConnectionStatus.ACTIVE;
+    }
+    return new PeerStatus(peerInfo.getName(), peerInfo.getEndpoint(), peerInfo.getTetherStatus(),
+                          peerInfo.getMetadata(), connectionStatus);
   }
 }

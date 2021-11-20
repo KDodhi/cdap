@@ -31,15 +31,11 @@ import io.cdap.cdap.client.config.ConnectionConfig;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.common.guice.ConfigModule;
-import io.cdap.cdap.common.guice.NamespaceAdminTestModule;
 import io.cdap.cdap.common.http.CommonNettyHttpServiceBuilder;
 import io.cdap.cdap.common.metrics.NoOpMetricsCollectionService;
-import io.cdap.cdap.common.namespace.NamespaceAdmin;
 import io.cdap.cdap.data.runtime.StorageModule;
 import io.cdap.cdap.data.runtime.SystemDatasetRuntimeModule;
 import io.cdap.cdap.data.runtime.TransactionExecutorModule;
-import io.cdap.cdap.proto.NamespaceMeta;
-import io.cdap.cdap.proto.id.NamespaceId;
 import io.cdap.cdap.spi.data.StructuredTableAdmin;
 import io.cdap.cdap.spi.data.table.StructuredTableRegistry;
 import io.cdap.cdap.spi.data.transaction.TransactionRunner;
@@ -62,7 +58,6 @@ import org.junit.Test;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -81,7 +76,6 @@ public class TetherClientHandlerTest {
   public static final String  LOCATION = "us-west1";
   private static CConfiguration cConf;
   private static TetherStore tetherStore;
-  private static NamespaceAdmin namespaceAdmin;
   private static Injector injector;
   private static TransactionManager txManager;
 
@@ -100,7 +94,6 @@ public class TetherClientHandlerTest {
       new SystemDatasetRuntimeModule().getInMemoryModules(),
       new TransactionModules().getInMemoryModules(),
       new TransactionExecutorModule(),
-      new NamespaceAdminTestModule(),
       new StorageModule(),
       new PrivateModule() {
         @Override
@@ -113,46 +106,10 @@ public class TetherClientHandlerTest {
     txManager = injector.getInstance(TransactionManager.class);
     txManager.startAndWait();
 
-    namespaceAdmin = injector.getInstance(NamespaceAdmin.class);
-    Map<String, String> config1 = ImmutableMap.of(
-      TetherClientHandler.NAMESPACE_CPU_LIMIT_PROPERTY, NAMESPACES.get(0).getCpuLimit(),
-      TetherClientHandler.NAMESPACE_MEMORY_LIMIT_PROPERTY, NAMESPACES.get(0).getMemoryLimit());
-    NamespaceMeta nsMeta1 = new NamespaceMeta.Builder()
-      .setName(NAMESPACE_1)
-      .setDescription("my ns1")
-      .setGeneration(System.currentTimeMillis())
-      .setConfig(config1)
-      .build();
-    Map<String, String> config2 = ImmutableMap.of(
-      TetherClientHandler.NAMESPACE_CPU_LIMIT_PROPERTY, NAMESPACES.get(1).getCpuLimit(),
-      TetherClientHandler.NAMESPACE_MEMORY_LIMIT_PROPERTY, NAMESPACES.get(1).getMemoryLimit());
-    NamespaceMeta nsMeta2 = new NamespaceMeta.Builder()
-      .setName(NAMESPACE_2)
-      .setDescription("my ns2")
-      .setGeneration(System.currentTimeMillis())
-      .setConfig(config2)
-      .build();
-
-    Map<String, String> config3 = new HashMap<>();
-    // Not using an ImmutableMap here because it doesn't allow null values.
-    config3.put(TetherClientHandler.NAMESPACE_CPU_LIMIT_PROPERTY, NAMESPACES.get(2).getCpuLimit());
-    config3.put(TetherClientHandler.NAMESPACE_MEMORY_LIMIT_PROPERTY, NAMESPACES.get(2).getMemoryLimit());
-    NamespaceMeta nsMeta3 = new NamespaceMeta.Builder()
-      .setName(NAMESPACE_3)
-      .setDescription("my ns3")
-      .setGeneration(System.currentTimeMillis())
-      .setConfig(config3)
-      .build();
-    namespaceAdmin.create(nsMeta1);
-    namespaceAdmin.create(nsMeta2);
-    namespaceAdmin.create(nsMeta3);
   }
 
   @AfterClass
   public static void teardown() throws Exception {
-    namespaceAdmin.delete(new NamespaceId(NAMESPACE_1));
-    namespaceAdmin.delete(new NamespaceId(NAMESPACE_2));
-    namespaceAdmin.delete(new NamespaceId(NAMESPACE_3));
     if (txManager != null) {
       txManager.stopAndWait();
     }
@@ -183,7 +140,7 @@ public class TetherClientHandlerTest {
     cConf.set(Constants.INSTANCE_NAME, CLIENT_INSTANCE);
 
     clientService = new CommonNettyHttpServiceBuilder(conf, getClass().getSimpleName() + "_client")
-      .setHttpHandlers(new TetherClientHandler(cConf, tetherStore, namespaceAdmin),
+      .setHttpHandlers(new TetherClientHandler(cConf, tetherStore),
                        new TetherHandler(cConf, tetherStore))
       .build();
     clientService.start();
@@ -328,7 +285,7 @@ public class TetherClientHandlerTest {
     Assert.assertEquals(serverConfig.getConnectionConfig().getURI().toString(), peerStatus.getEndpoint());
     Assert.assertEquals(PROJECT, peerStatus.getPeerMetadata().getMetadata().get("project"));
     Assert.assertEquals(LOCATION, peerStatus.getPeerMetadata().getMetadata().get("location"));
-    Assert.assertEquals(NAMESPACES, peerStatus.getPeerMetadata().getNamespaces());
+    Assert.assertEquals(NAMESPACES, peerStatus.getPeerMetadata().getNamespaceAllocations());
 
     // cleanup
     deleteTether(SERVER_INSTANCE);
@@ -382,14 +339,11 @@ public class TetherClientHandlerTest {
                             List<NamespaceAllocation> namespaceAllocations, TetherStatus expectedTetherStatus)
     throws IOException, InterruptedException {
     // Send tether request
-    List<String> namespaces = ImmutableList.of(NAMESPACES.get(0).getNamespace(),
-                                               NAMESPACES.get(1).getNamespace(),
-                                               NAMESPACES.get(2).getNamespace());
     Map<String, String> metadata = ImmutableMap.of("project", project, "location", location);
     TetherCreationRequest tetherRequest = new TetherCreationRequest(instance,
                                                                     serverConfig.getConnectionConfig().getURI()
                                                                       .toString(),
-                                                                    namespaces,
+                                                                    NAMESPACES,
                                                                     metadata);
     HttpRequest request = HttpRequest.builder(HttpMethod.POST, clientConfig.resolveURL("tethering/create"))
       .withBody(GSON.toJson(tetherRequest))
@@ -426,7 +380,7 @@ public class TetherClientHandlerTest {
     Assert.assertEquals(endpoint, peer.getEndpoint());
     Assert.assertEquals(project, peer.getPeerMetadata().getMetadata().get("project"));
     Assert.assertEquals(location, peer.getPeerMetadata().getMetadata().get("location"));
-    Assert.assertEquals(namespaces, peer.getPeerMetadata().getNamespaces());
+    Assert.assertEquals(namespaces, peer.getPeerMetadata().getNamespaceAllocations());
     Assert.assertEquals(connectionStatus, peer.getConnectionStatus());
   }
 
