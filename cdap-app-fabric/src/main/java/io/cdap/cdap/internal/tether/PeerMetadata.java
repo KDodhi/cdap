@@ -50,7 +50,8 @@ public class PeerMetadata {
       return false;
     }
     PeerMetadata that = (PeerMetadata) other;
-    return Objects.equals(this.namespaceAllocations, that.namespaceAllocations) && Objects.equals(this.metadata, that.metadata);
+    return Objects.equals(this.namespaceAllocations, that.namespaceAllocations) &&
+      Objects.equals(this.metadata, that.metadata);
   }
 
   @Override
