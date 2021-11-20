@@ -78,7 +78,8 @@ public class TetherHandler extends AbstractHttpHandler {
    */
   @GET
   @Path("/tethering/connections/{peer}")
-  public void getTether(HttpRequest request, HttpResponder responder, @PathParam("peer") String peer) {
+  public void getTether(HttpRequest request, HttpResponder responder, @PathParam("peer") String peer)
+    throws PeerNotFoundException, IOException {
     responder.sendJson(HttpResponseStatus.OK, GSON.toJson(getPeerStatus(store.getPeer(peer))));
   }
 
@@ -87,8 +88,9 @@ public class TetherHandler extends AbstractHttpHandler {
    */
   @DELETE
   @Path("/tethering/connections/{peer}")
-  public void deleteTether(HttpRequest request, HttpResponder responder, @PathParam("peer") String peer) {
-    // getPeer() throws NotFoundException if peer is not present
+  public void deleteTether(HttpRequest request, HttpResponder responder, @PathParam("peer") String peer)
+    throws PeerNotFoundException, IOException {
+    // getPeer() throws PeerNotFoundException if peer is not present
     store.getPeer(peer);
     store.deletePeer(peer);
     responder.sendStatus(HttpResponseStatus.OK);

@@ -55,7 +55,7 @@ public class TetherStore {
    * @param peerInfo peer information
    * @throws IOException if inserting into the table fails
    */
-  public void addPeer(PeerInfo peerInfo) {
+  public void addPeer(PeerInfo peerInfo) throws IOException {
     TransactionRunners.run(transactionRunner, context -> {
       StructuredTable tetherTable = context.getTable(StoreDefinition.TetherStore.TETHER);
       Collection<Field<?>> fields = new ArrayList<>();
@@ -77,7 +77,7 @@ public class TetherStore {
    * @param tetherStatus status of tether with the peer
    * @throws IOException if updating the table fails
    */
-    public void updatePeerStatusAndTimestamp(String peerName, TetherStatus tetherStatus) {
+    public void updatePeerStatusAndTimestamp(String peerName, TetherStatus tetherStatus) throws IOException {
     TransactionRunners.run(transactionRunner, context -> {
       Collection<Field<?>> fields = new ArrayList<>();
       fields.add(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
@@ -95,7 +95,7 @@ public class TetherStore {
    * @param tetherStatus status of tether with the peer
    * @throws IOException if updating the table fails
    */
-  public void updatePeerStatus(String peerName, TetherStatus tetherStatus) {
+  public void updatePeerStatus(String peerName, TetherStatus tetherStatus) throws IOException {
     TransactionRunners.run(transactionRunner, context -> {
       Collection<Field<?>> fields = new ArrayList<>();
       fields.add(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
@@ -111,7 +111,7 @@ public class TetherStore {
    * @param peerName name of the peer
    * @throws IOException if updating the table fails
    */
-  public void updatePeerTimestamp(String peerName) {
+  public void updatePeerTimestamp(String peerName) throws IOException {
     TransactionRunners.run(transactionRunner, context -> {
       Collection<Field<?>> fields = new ArrayList<>();
       fields.add(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
@@ -127,7 +127,7 @@ public class TetherStore {
    * @param peerName name of the peer
    * @throws IOException if deleting the table fails
    */
-  public void deletePeer(String peerName) {
+  public void deletePeer(String peerName) throws IOException {
     TransactionRunners.run(transactionRunner, context -> {
       StructuredTable capabilityTable = context.getTable(StoreDefinition.TetherStore.TETHER);
       capabilityTable
@@ -168,7 +168,7 @@ public class TetherStore {
    * @throws IOException if reading from the database fails
    * @throws PeerNotFoundException if the peer is not found
    */
-  public PeerInfo getPeer(String peerName) {
+  public PeerInfo getPeer(String peerName) throws IOException, PeerNotFoundException {
     return TransactionRunners.run(transactionRunner, context -> {
       StructuredTable tetherTable = context
         .getTable(StoreDefinition.TetherStore.TETHER);

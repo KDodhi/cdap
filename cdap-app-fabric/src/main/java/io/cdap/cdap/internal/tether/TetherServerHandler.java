@@ -102,7 +102,7 @@ public class TetherServerHandler extends AbstractHttpHandler {
   @GET
   @Path("/tethering/controlchannels/{peer}")
   public void connectControlChannel(HttpRequest request, HttpResponder responder, @PathParam("peer") String peer)
-    throws IOException, NotImplementedException {
+    throws IOException, NotImplementedException, PeerNotFoundException {
     checkTetherServerEnabled();
 
     store.updatePeerTimestamp(peer);
@@ -194,7 +194,7 @@ public class TetherServerHandler extends AbstractHttpHandler {
   @Path("/tethering/connections/{peer}")
   public void tetherAction(HttpRequest request, HttpResponder responder, @PathParam("peer") String peer,
                            @QueryParam("action") String action)
-    throws NotImplementedException, BadRequestException {
+    throws NotImplementedException, BadRequestException, PeerNotFoundException, IOException {
     TetherStatus tetherStatus;
     switch (action) {
       case "accept":
@@ -237,7 +237,7 @@ public class TetherServerHandler extends AbstractHttpHandler {
   }
 
   private void updateTetherStatus(HttpResponder responder, String peer, TetherStatus newStatus)
-    throws NotImplementedException {
+    throws NotImplementedException, PeerNotFoundException, IOException {
     checkTetherServerEnabled();
     PeerInfo peerInfo = store.getPeer(peer);
     if (peerInfo.getTetherStatus() == TetherStatus.PENDING) {

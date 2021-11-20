@@ -164,7 +164,7 @@ public class TetherClientHandlerTest {
   }
 
   @Test
-  public void testResendTetherRequests() throws InterruptedException {
+  public void testResendTetherRequests() throws InterruptedException, IOException {
     Map<String, String> metadata = ImmutableMap.of("project", PROJECT,
                                                    "location", LOCATION);
     PeerMetadata peerMetadata = new PeerMetadata(NAMESPACES, metadata);
