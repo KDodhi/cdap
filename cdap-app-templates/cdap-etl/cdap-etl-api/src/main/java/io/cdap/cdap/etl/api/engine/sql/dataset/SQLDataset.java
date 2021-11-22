@@ -16,22 +16,10 @@
 
 package io.cdap.cdap.etl.api.engine.sql.dataset;
 
-import io.cdap.cdap.api.data.schema.Schema;
-
 /**
  * Represents a dataset that resides in a SQL engine outside of spark.
  */
-public interface SQLDataset {
-
-  /**
-   * Get the name of this dataset. This can be used to link datasets in the SQL engine with Datasets stored in Spark.
-   */
-  String getDatasetName();
-
-  /**
-   * Get the schema for the records stored in this dataset.
-   */
-  Schema getSchema();
+public interface SQLDataset extends SQLDatasetDescription {
 
   /**
    * Get the number of rows stored in this dataset.

@@ -38,7 +38,6 @@ import io.cdap.cdap.data.runtime.StorageModule;
 import io.cdap.cdap.data.runtime.SystemDatasetRuntimeModule;
 import io.cdap.cdap.data.runtime.TransactionExecutorModule;
 import io.cdap.cdap.spi.data.StructuredTableAdmin;
-import io.cdap.cdap.spi.data.table.StructuredTableRegistry;
 import io.cdap.cdap.spi.data.transaction.TransactionRunner;
 import io.cdap.cdap.store.StoreDefinition;
 import io.cdap.common.http.HttpMethod;
@@ -118,11 +117,8 @@ public class TetherClientHandlerTest {
 
   @Before
   public void setUp() throws Exception {
-    StructuredTableRegistry structuredTableRegistry = injector.getInstance(StructuredTableRegistry.class);
-    structuredTableRegistry.initialize();
     // Define all StructuredTable before starting any services that need StructuredTable
-    StoreDefinition.createAllTables(injector.getInstance(StructuredTableAdmin.class),
-                                    structuredTableRegistry);
+    StoreDefinition.createAllTables(injector.getInstance(StructuredTableAdmin.class));
     CConfiguration conf = CConfiguration.create();
     serverHandler = new MockTetherServerHandler();
     serverService = new CommonNettyHttpServiceBuilder(conf, getClass().getSimpleName() + "_server")

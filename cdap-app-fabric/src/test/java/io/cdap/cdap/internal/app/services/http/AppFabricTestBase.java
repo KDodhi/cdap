@@ -81,6 +81,7 @@ import io.cdap.cdap.internal.app.runtime.schedule.trigger.TriggerCodec;
 import io.cdap.cdap.internal.app.services.AppFabricServer;
 import io.cdap.cdap.internal.guice.AppFabricTestModule;
 import io.cdap.cdap.internal.schedule.constraint.Constraint;
+import io.cdap.cdap.logging.service.LogQueryService;
 import io.cdap.cdap.messaging.MessagingService;
 import io.cdap.cdap.metadata.MetadataService;
 import io.cdap.cdap.metadata.MetadataSubscriberService;
@@ -116,7 +117,6 @@ import io.cdap.cdap.security.spi.authentication.SecurityRequestContext;
 import io.cdap.cdap.security.spi.authentication.UnauthenticatedException;
 import io.cdap.cdap.security.spi.authorization.UnauthorizedException;
 import io.cdap.cdap.spi.data.StructuredTableAdmin;
-import io.cdap.cdap.spi.data.table.StructuredTableRegistry;
 import io.cdap.cdap.spi.metadata.MetadataMutation;
 import io.cdap.cdap.spi.metadata.MetadataStorage;
 import io.cdap.cdap.store.StoreDefinition;
@@ -221,6 +221,7 @@ public abstract class AppFabricTestBase {
   private static MetadataClient metadataClient;
   private static MetricStore metricStore;
   private static RemoteClientFactory remoteClientFactory;
+  private static LogQueryService logQueryService;
 
   private static HttpRequestConfig httpRequestConfig;
 
@@ -237,14 +238,14 @@ public abstract class AppFabricTestBase {
       @Override
       protected void configure() {
         // needed because we set Kerberos to true in DefaultNamespaceAdminTest
-        install(new SupportBundleModule());
+//        install(new SupportBundleModule());
         bind(UGIProvider.class).to(CurrentUGIProvider.class);
         bind(MetadataSubscriberService.class).in(Scopes.SINGLETON);
-        Multibinder<HttpHandler> handlerBinder = Multibinder.newSetBinder(
-          binder(), HttpHandler.class, Names.named(Constants.AppFabric.HANDLERS_BINDING));
-
-        CommonHandlers.add(handlerBinder);
-        handlerBinder.addBinding().to(SupportBundleHttpHandler.class);
+//        Multibinder<HttpHandler> handlerBinder = Multibinder.newSetBinder(
+//          binder(), HttpHandler.class, Names.named(Constants.AppFabric.HANDLERS_BINDING));
+//
+//        CommonHandlers.add(handlerBinder);
+//        handlerBinder.addBinding().to(SupportBundleHttpHandler.class);
       }
     });
   }
@@ -263,11 +264,8 @@ public abstract class AppFabricTestBase {
     }
     txManager = injector.getInstance(TransactionManager.class);
     txManager.startAndWait();
-    StructuredTableRegistry structuredTableRegistry = injector.getInstance(StructuredTableRegistry.class);
-    structuredTableRegistry.initialize();
     // Define all StructuredTable before starting any services that need StructuredTable
-    StoreDefinition.createAllTables(injector.getInstance(StructuredTableAdmin.class),
-                                    structuredTableRegistry);
+    StoreDefinition.createAllTables(injector.getInstance(StructuredTableAdmin.class));
     metadataStorage = injector.getInstance(MetadataStorage.class);
     metadataStorage.createIndex();
 
@@ -290,6 +288,8 @@ public abstract class AppFabricTestBase {
     metadataService.startAndWait();
     metadataSubscriberService = injector.getInstance(MetadataSubscriberService.class);
     metadataSubscriberService.startAndWait();
+    logQueryService = injector.getInstance(LogQueryService.class);
+    logQueryService.startAndWait();
     locationFactory = getInjector().getInstance(LocationFactory.class);
     datasetClient = new DatasetClient(getClientConfig(discoveryClient, Constants.Service.DATASET_MANAGER));
     remoteClientFactory = new RemoteClientFactory(discoveryClient,
@@ -320,6 +320,7 @@ public abstract class AppFabricTestBase {
     serviceStore.stopAndWait();
     metadataSubscriberService.stopAndWait();
     metadataService.stopAndWait();
+    logQueryService.stopAndWait();
     if (messagingService instanceof Service) {
       ((Service) messagingService).stopAndWait();
     }

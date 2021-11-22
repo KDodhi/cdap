@@ -383,19 +383,6 @@ public final class Constants {
   }
 
   /**
-   * Spark on k8s
-   */
-  public static final class Spark {
-    public static final class Driver {
-      public static final String ADDRESS = "driver.artifact.fetcher.bind.address";
-      public static final String PORT = "driver.artifact.fetcher.bind.port";
-      public static final String EXEC_THREADS = "driver.artifact.fetcher.exec.threads";
-      public static final String BOSS_THREADS = "driver.artifact.fetcher.boss.threads";
-      public static final String WORKER_THREADS = "driver.artifact.fetcher.worker.threads";
-    }
-  }
-
-  /**
    * Environment configurations.
    */
   public static final class Environment {
@@ -579,6 +566,9 @@ public final class Constants {
     public static final String DATASET_UNCHECKED_UPGRADE = "dataset.unchecked.upgrade";
 
     public static final String DATA_EVENT_TOPIC = "data.event.topic";
+
+    public static final String STORAGE_EXTENSION_DIR = "data.storage.extensions.dir";
+    public static final String STORAGE_EXTENSION_PROPERTY_PREFIX = "data.storage.properties.";
 
     public static final String DATA_STORAGE_IMPLEMENTATION = "data.storage.implementation";
     public static final String DATA_STORAGE_NOSQL = "nosql";
@@ -1043,6 +1033,7 @@ public final class Constants {
     public static final String STATUS_OK = "OK";
     public static final String STATUS_NOTOK = "NOTOK";
     public static final String DISCOVERY_TIMEOUT_SECONDS = "monitor.handler.service.discovery.timeout.seconds";
+    public static final String SYSTEM_LOG_SERVICE_URL = "system/services";
   }
 
   /**
@@ -1782,11 +1773,11 @@ public final class Constants {
   public static final class SupportBundle {
     public static final String MAX_FOLDER_SIZE = "support.bundle.max.folder.size";
     public static final String MAX_THREADS = "support.bundle.max.threads";
-    public static final String DEFAULT_WORKFLOW = "support.bundle.default.workflow";
     public static final String LOCAL_DATA_DIR = "support.bundle.local.data.dir";
     public static final String TASK_FACTORY = "support.bundle.task.factory";
     public static final String MAX_RETRY_TIMES = "support.bundle.max.retry.times";
     public static final String MAX_THREAD_TIMEOUT = "support.bundle.max.thread.timeout";
+    public static final String SYSTEM_LOG_START_TIME = "support.bundle.system.log.start.time";
   }
 
   public static final class Tether {

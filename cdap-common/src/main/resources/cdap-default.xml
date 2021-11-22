@@ -834,6 +834,11 @@
   </property>
 
   <property>
+    <name>data.storage.extensions.dir</name>
+    <value>/opt/cdap/master/ext/storageproviders</value>
+  </property>
+
+  <property>
     <name>data.storage.implementation</name>
     <value>nosql</value>
     <description>
@@ -4360,15 +4365,7 @@
 
   <!-- Spark on k8s  -->
   <property>
-    <name>driver.artifact.fetcher.bind.address</name>
-    <value>0.0.0.0</value>
-    <description>
-      The bind address for artifact fetcher service
-    </description>
-  </property>
-
-  <property>
-    <name>driver.artifact.fetcher.bind.port</name>
+    <name>artifact.fetcher.bind.port</name>
     <value>11013</value>
     <description>
       The bind port for artifact fetcher service
@@ -4655,10 +4652,10 @@
   </property>
 
   <property>
-    <name>support.bundle.default.workflow</name>
-    <value>DataPipelineWorkflow</value>
+    <name>support.bundle.system.log.start.time</name>
+    <value>1</value>
     <description>
-      The default workflow name.
+      system log start 1 day ago to collect logs
     </description>
   </property>
 </configuration>

@@ -49,16 +49,6 @@ public class ProvisionerExtensionLoader extends AbstractExtensionLoader<String, 
     }
   }
 
-  private static Set<String> createPackageSets(Set<String> resources) {
-    return resources.stream()
-      .map(resource -> {
-        int idx = resource.lastIndexOf("/");
-        return idx < 0 ? "" : resource.substring(0, idx).replace('/', '.');
-      })
-      .filter(s -> !s.isEmpty())
-      .collect(Collectors.toSet());
-  }
-
   @Inject
   ProvisionerExtensionLoader(CConfiguration cConf) {
     super(cConf.get(Constants.Provisioner.EXTENSIONS_DIR));
