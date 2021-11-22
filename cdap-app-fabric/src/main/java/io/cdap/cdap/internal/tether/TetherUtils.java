@@ -33,7 +33,6 @@ import javax.annotation.Nullable;
 public class TetherUtils {
   // Connection timeout = 5 seconds.
   private static final int TIMEOUT_MS = 5000;
-  private static final RemoteAuthenticator AUTHENTICATOR = RemoteAuthenticator.getDefaultAuthenticator();
 
   private TetherUtils() {
   }
@@ -64,10 +63,12 @@ public class TetherUtils {
     if (content != null && !content.isEmpty()) {
       builder.withBody(content);
     }
+
     // Add Authorization header.
-    if (AUTHENTICATOR != null) {
+    RemoteAuthenticator authenticator = RemoteAuthenticator.getDefaultAuthenticator();
+    if (authenticator != null) {
       builder.addHeader(HttpHeaders.AUTHORIZATION,
-                        String.format("%s %s", AUTHENTICATOR.getType(), AUTHENTICATOR.getCredentials()));
+                        String.format("%s %s", authenticator.getType(), authenticator.getCredentials()));
     }
     return HttpRequests.execute(builder.build(), new HttpRequestConfig(TIMEOUT_MS, TIMEOUT_MS));
   }

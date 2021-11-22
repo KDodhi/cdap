@@ -21,6 +21,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
+import io.cdap.cdap.common.internal.remote.RemoteAuthenticator;
 import io.cdap.cdap.spi.data.transaction.TransactionRunner;
 import io.cdap.common.http.HttpMethod;
 import io.cdap.common.http.HttpResponse;
@@ -55,6 +56,16 @@ public class RemoteAgentService extends AbstractScheduledService {
     this.cConf = cConf;
     this.store = new TetherStore(transactionRunner);
     this.instanceName = cConf.get(Constants.INSTANCE_NAME);
+  }
+
+  @Override
+  public void startUp() throws InstantiationException, IllegalAccessException {
+    Class<? extends RemoteAuthenticator> authClass = cConf.getClass(Constants.Tether.CLIENT_AUTHENTICATOR_CLASS,
+                                                                    null,
+                                                                    RemoteAuthenticator.class);
+    if (authClass != null) {
+      RemoteAuthenticator.setDefaultAuthenticator(authClass.newInstance());
+    }
   }
 
   @Override

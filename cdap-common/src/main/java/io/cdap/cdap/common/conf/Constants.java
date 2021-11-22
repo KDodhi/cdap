@@ -1803,5 +1803,7 @@ public final class Constants {
      */
     public static final String CONNECTION_TIMEOUT_SECONDS = "tether.connection.timeout.seconds";
     public static final int DEFAULT_CONNECTION_TIMEOUT_SECONDS = 60;
+
+    public static final String CLIENT_AUTHENTICATOR_CLASS = "tether.client.authenticator.class";
   }
 }
