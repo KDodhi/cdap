@@ -167,15 +167,13 @@ public class TetherStore {
     return TransactionRunners.run(transactionRunner, context -> {
       StructuredTable tetherTable = context
         .getTable(StoreDefinition.TetherStore.TETHER);
-      Range range =  Range.singleton(
-        ImmutableList.of(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName)));
-      try (CloseableIterator<StructuredRow> iterator = tetherTable.scan(range, Integer.MAX_VALUE)) {
-        if (!iterator.hasNext()) {
-          throw new PeerNotFoundException(peerName);
-        }
-        StructuredRow row = iterator.next();
-        return getPeerInfo(row);
+      Collection<Field<?>> key = ImmutableList.of(
+        Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
+      Optional<StructuredRow> row = tetherTable.read(key);
+      if (!row.isPresent()) {
+        throw new PeerNotFoundException(peerName);
       }
+      return getPeerInfo(row.get());
     }, PeerNotFoundException.class, IOException.class);
   }
 
