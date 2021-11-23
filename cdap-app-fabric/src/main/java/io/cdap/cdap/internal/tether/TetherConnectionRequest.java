@@ -19,7 +19,7 @@ package io.cdap.cdap.internal.tether;
 import java.util.List;
 
 /**
- * Tethering request sent from the {@link io.cdap.cdap.internal.tether.RemoteAgentService} to
+ * Tethering request sent from the {@link TetherAgentService} to
  * the tethering server.
  */
 public class TetherConnectionRequest {

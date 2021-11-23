@@ -4658,4 +4658,20 @@
       system log start 1 day ago to collect logs
     </description>
   </property>
+
+  <property>
+    <name>tether.connection.interval</name>
+    <value>10</value>
+    <description>
+      Interval for connecting to the tether server.
+    </description>
+  </property>
+
+  <property>
+    <name>tether.server.enabled</name>
+    <value>false</value>
+    <description>
+      Determines if tethering server shouuld be enabled.
+    </description>
+  </property>
 </configuration>

@@ -1782,12 +1782,10 @@ public final class Constants {
 
   public static final class Tether {
     public static final String TETHER_SERVER_ENABLE = "tether.server.enabled";
-    public static final Boolean DEFAULT_TETHER_SERVER_ENABLE = false;
     /**
      * Interval for connecting to the server.
      */
     public static final String CONNECT_INTERVAL = "tether.connect.interval";
-    public static final int CONNECT_INTERVAL_DEFAULT = 10;
 
     /**
      * Tethering connection timeout.

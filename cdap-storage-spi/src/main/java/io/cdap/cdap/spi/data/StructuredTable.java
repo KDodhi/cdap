@@ -141,7 +141,7 @@ public interface StructuredTable extends Closeable {
    *                               do not match
    * @throws IOException if there is an error scanning the table
    */
-  CloseableIterator<StructuredRow> multiScan(Collection<Range> keyRanges,
+  CloseableIterator<StructuredRow>  multiScan(Collection<Range> keyRanges,
                                              int limit) throws InvalidFieldException, IOException;
 
   /**

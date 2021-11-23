@@ -123,7 +123,7 @@ public class TetherServerHandlerTest {
     cConf.setInt(Constants.Tether.CONNECTION_TIMEOUT_SECONDS, 1);
     service = new CommonNettyHttpServiceBuilder(CConfiguration.create(), getClass().getSimpleName())
       .setHttpHandlers(new TetherServerHandler(cConf, tetherStore, messagingService, transactionRunner),
-                       new TetherHandler(cConf, tetherStore))
+                       new TetherHandler(cConf, tetherStore, messagingService))
       .build();
     service.start();
     config = ClientConfig.builder()
@@ -162,6 +162,11 @@ public class TetherServerHandlerTest {
     // Reject tethering should be ignored
     rejectTether();
     expectTetherControlResponse("xyz", HttpResponseStatus.OK);
+
+    // Tether initiation should be ignored
+    createTether("xyz", NAMESPACES);
+    expectTetherControlResponse("xyz", HttpResponseStatus.OK);
+    expectTetherStatus("xyz", TetherStatus.ACCEPTED, NAMESPACES, TetherConnectionStatus.ACTIVE);
 
     // Wait until we don't receive any control messages from the peer for upto the timeout interval.
     Thread.sleep(cConf.getInt(Constants.Tether.CONNECTION_TIMEOUT_SECONDS) * 1000);

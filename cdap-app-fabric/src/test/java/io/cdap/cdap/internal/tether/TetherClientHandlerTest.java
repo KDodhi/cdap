@@ -32,11 +32,14 @@ import io.cdap.cdap.client.config.ConnectionConfig;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.common.guice.ConfigModule;
+import io.cdap.cdap.common.guice.InMemoryDiscoveryModule;
 import io.cdap.cdap.common.http.CommonNettyHttpServiceBuilder;
 import io.cdap.cdap.common.metrics.NoOpMetricsCollectionService;
 import io.cdap.cdap.data.runtime.StorageModule;
 import io.cdap.cdap.data.runtime.SystemDatasetRuntimeModule;
 import io.cdap.cdap.data.runtime.TransactionExecutorModule;
+import io.cdap.cdap.messaging.MessagingService;
+import io.cdap.cdap.messaging.guice.MessagingServerRuntimeModule;
 import io.cdap.cdap.spi.data.StructuredTableAdmin;
 import io.cdap.cdap.spi.data.transaction.TransactionRunner;
 import io.cdap.cdap.store.StoreDefinition;
@@ -84,7 +87,7 @@ public class TetherClientHandlerTest {
   private NettyHttpService clientService;
   private ClientConfig clientConfig;
   private MockTetherServerHandler serverHandler;
-  private RemoteAgentService remoteAgentService;
+  private TetherAgentService tetherAgentService;
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -94,6 +97,8 @@ public class TetherClientHandlerTest {
       new SystemDatasetRuntimeModule().getInMemoryModules(),
       new TransactionModules().getInMemoryModules(),
       new TransactionExecutorModule(),
+      new InMemoryDiscoveryModule(),
+      new MessagingServerRuntimeModule().getInMemoryModules(),
       new StorageModule(),
       new PrivateModule() {
         @Override
@@ -136,9 +141,10 @@ public class TetherClientHandlerTest {
     cConf.setInt(Constants.Tether.CONNECTION_TIMEOUT_SECONDS, 5);
     cConf.set(Constants.INSTANCE_NAME, CLIENT_INSTANCE);
 
+    MessagingService messagingService = injector.getInstance(MessagingService.class);
     clientService = new CommonNettyHttpServiceBuilder(conf, getClass().getSimpleName() + "_client")
       .setHttpHandlers(new TetherClientHandler(cConf, tetherStore),
-                       new TetherHandler(cConf, tetherStore))
+                       new TetherHandler(cConf, tetherStore, messagingService))
       .build();
     clientService.start();
     clientConfig = ClientConfig.builder()
@@ -149,13 +155,13 @@ public class TetherClientHandlerTest {
           .setSSLEnabled(false)
           .build()).build();
 
-    remoteAgentService = new RemoteAgentService(cConf, injector.getInstance(TransactionRunner.class));
-    Assert.assertEquals(Service.State.RUNNING, remoteAgentService.startAndWait());
+    tetherAgentService = new TetherAgentService(cConf, injector.getInstance(TransactionRunner.class));
+    Assert.assertEquals(Service.State.RUNNING, tetherAgentService.startAndWait());
   }
 
   @After
   public void tearDown() throws Exception {
-    Assert.assertEquals(Service.State.TERMINATED, remoteAgentService.stopAndWait());
+    Assert.assertEquals(Service.State.TERMINATED, tetherAgentService.stopAndWait());
 
   }
 

@@ -70,8 +70,8 @@ import javax.ws.rs.QueryParam;
 public class TetherServerHandler extends AbstractHttpHandler {
   private static final Logger LOG = LoggerFactory.getLogger(TetherServerHandler.class);
   private static final Gson GSON = new GsonBuilder().create();
-  private static final String TETHERING_TOPIC_PREFIX = "tethering_";
   private static final String SUBSCRIBER = "tether.server";
+  static final String TETHERING_TOPIC_PREFIX = "tethering_";
   private final CConfiguration cConf;
   private final TetherStore store;
   private final MessagingService messagingService;
@@ -170,6 +170,14 @@ public class TetherServerHandler extends AbstractHttpHandler {
       throw e;
     }
 
+    try {
+      store.getPeer(tetherRequest.getPeer());
+      // Peer is already configured, treat this as a no-op.
+      responder.sendStatus(HttpResponseStatus.OK);
+      return;
+    } catch(PeerNotFoundException ignored) {
+    }
+
     // We don't need to keep track of the client metadata on the server side.
     PeerMetadata peerMetadata = new PeerMetadata(tetherRequest.getNamespaceAllocations(), Collections.emptyMap());
     // We don't store the peer endpoint on the server side because the connection is initiated by the client.
@@ -231,7 +239,7 @@ public class TetherServerHandler extends AbstractHttpHandler {
   }
 
   private void checkTetherServerEnabled() throws NotImplementedException {
-    if (!cConf.getBoolean(Constants.Tether.TETHER_SERVER_ENABLE, Constants.Tether.DEFAULT_TETHER_SERVER_ENABLE)) {
+    if (!cConf.getBoolean(Constants.Tether.TETHER_SERVER_ENABLE)) {
       throw new NotImplementedException("Tethering is not enabled");
     }
   }

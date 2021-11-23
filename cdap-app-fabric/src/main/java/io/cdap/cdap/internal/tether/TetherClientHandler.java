@@ -34,7 +34,6 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Optional;
 import javax.inject.Inject;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -83,13 +82,15 @@ public class TetherClientHandler extends AbstractHttpHandler {
     String content = request.content().toString(StandardCharsets.UTF_8);
     TetherCreationRequest tetherCreationRequest = GSON.fromJson(content, TetherCreationRequest.class);
 
-    List<PeerInfo> peers = store.getPeers();
-    Optional<PeerInfo> peer = peers.stream()
-      .filter(p -> p.getName().equals(tetherCreationRequest.getPeer()))
-      .findFirst();
-    if (peer.isPresent()) {
+    PeerInfo peer = null;
+    try {
+      peer = store.getPeer(tetherCreationRequest.getPeer());
+    } catch (PeerNotFoundException e) {
+      // Do nothing, expected if peer is not already configured.
+    }
+    if (peer != null) {
       LOG.info("Peer {} is already present in state {}, ignoring tethering request",
-               peer.get().getName(), peer.get().getTetherStatus());
+               peer.getName(), peer.getTetherStatus());
       responder.sendStatus(HttpResponseStatus.OK);
       return;
     }

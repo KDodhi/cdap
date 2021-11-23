@@ -18,13 +18,19 @@ package io.cdap.cdap.internal.tether;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import io.cdap.cdap.api.messaging.TopicNotFoundException;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
+import io.cdap.cdap.messaging.MessagingService;
+import io.cdap.cdap.proto.id.NamespaceId;
+import io.cdap.cdap.proto.id.TopicId;
 import io.cdap.http.AbstractHttpHandler;
 import io.cdap.http.HandlerContext;
 import io.cdap.http.HttpResponder;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,17 +46,21 @@ import javax.ws.rs.PathParam;
  */
 @Path(Constants.Gateway.API_VERSION_3)
 public class TetherHandler extends AbstractHttpHandler {
+  private static final Logger LOG = LoggerFactory.getLogger(TetherHandler.class);
   private static final Gson GSON = new GsonBuilder().create();
 
   private final CConfiguration cConf;
   private final TetherStore store;
+  private final MessagingService messagingService;
+
   // Connection timeout in seconds.
   private int connectionTimeout;
 
   @Inject
-  TetherHandler(CConfiguration cConf, TetherStore store) {
+  TetherHandler(CConfiguration cConf, TetherStore store, MessagingService messagingService) {
     this.cConf = cConf;
     this.store = store;
+    this.messagingService = messagingService;
   }
 
   @Override
@@ -93,6 +103,16 @@ public class TetherHandler extends AbstractHttpHandler {
     // getPeer() throws PeerNotFoundException if peer is not present
     store.getPeer(peer);
     store.deletePeer(peer);
+    // Remove per-peer tethering topic if we're running on the server
+    if (cConf.getBoolean(Constants.Tether.TETHER_SERVER_ENABLE)) {
+      TopicId topic = new TopicId(NamespaceId.SYSTEM.getNamespace(),
+                                  TetherServerHandler.TETHERING_TOPIC_PREFIX + peer);
+      try {
+        messagingService.deleteTopic(topic);
+      } catch (TopicNotFoundException e) {
+        LOG.info("Topic {} was not found", topic.getTopic());
+      }
+    }
     responder.sendStatus(HttpResponseStatus.OK);
   }
 
