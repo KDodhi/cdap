@@ -20,9 +20,11 @@ import com.google.gson.Gson;
 import io.cdap.cdap.common.BadRequestException;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
+import io.cdap.cdap.common.internal.remote.RemoteAuthenticator;
 import io.cdap.common.http.HttpMethod;
 import io.cdap.common.http.HttpResponse;
 import io.cdap.http.AbstractHttpHandler;
+import io.cdap.http.HandlerContext;
 import io.cdap.http.HttpResponder;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -47,12 +49,29 @@ public class TetherClientHandler extends AbstractHttpHandler {
   static final String CREATE_TETHER = "/v3/tethering/connect";
 
   private final TetherStore store;
+  private final CConfiguration cConf;
   private final String instanceName;
 
   @Inject
   TetherClientHandler(CConfiguration cConf, TetherStore store) {
     this.store = store;
+    this.cConf = cConf;
     this.instanceName = cConf.get(Constants.INSTANCE_NAME);
+  }
+
+  @Override
+  public void init(HandlerContext context) {
+    super.init(context);
+    Class<? extends RemoteAuthenticator> authClass = cConf.getClass(Constants.Tether.CLIENT_AUTHENTICATOR_CLASS,
+                                                                    null,
+                                                                    RemoteAuthenticator.class);
+    if (authClass != null) {
+      try {
+        RemoteAuthenticator.setDefaultAuthenticator(authClass.newInstance());
+      } catch (Exception e) {
+        LOG.error("Failed to set default authenticator", e);
+      }
+    }
   }
 
   /**
