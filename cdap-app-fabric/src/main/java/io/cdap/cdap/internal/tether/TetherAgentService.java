@@ -97,6 +97,7 @@ public class TetherAgentService extends AbstractRetryableScheduledService {
             break;
           case HttpURLConnection.HTTP_FORBIDDEN:
             handleForbidden(peer);
+            break;
           default:
             LOG.error("Peer {} returned unexpected error code {} body {}",
                       peer.getName(), resp.getResponseCode(),

@@ -175,7 +175,7 @@ public class TetherServerHandler extends AbstractHttpHandler {
       // Peer is already configured, treat this as a no-op.
       responder.sendStatus(HttpResponseStatus.OK);
       return;
-    } catch(PeerNotFoundException ignored) {
+    } catch (PeerNotFoundException ignored) {
     }
 
     // We don't need to keep track of the client metadata on the server side.
