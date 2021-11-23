@@ -25,6 +25,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.PrivateModule;
 import com.google.inject.Scopes;
+import io.cdap.cdap.api.messaging.TopicNotFoundException;
 import io.cdap.cdap.api.metrics.MetricsCollectionService;
 import io.cdap.cdap.client.config.ClientConfig;
 import io.cdap.cdap.client.config.ConnectionConfig;
@@ -38,7 +39,10 @@ import io.cdap.cdap.data.runtime.StorageModule;
 import io.cdap.cdap.data.runtime.SystemDatasetRuntimeModule;
 import io.cdap.cdap.data.runtime.TransactionExecutorModule;
 import io.cdap.cdap.messaging.MessagingService;
+import io.cdap.cdap.messaging.TopicMetadata;
 import io.cdap.cdap.messaging.guice.MessagingServerRuntimeModule;
+import io.cdap.cdap.proto.id.NamespaceId;
+import io.cdap.cdap.proto.id.TopicId;
 import io.cdap.cdap.spi.data.StructuredTableAdmin;
 import io.cdap.cdap.spi.data.transaction.TransactionRunner;
 import io.cdap.cdap.store.StoreDefinition;
@@ -225,6 +229,28 @@ public class TetherServerHandlerTest {
 
     // Delete tethering
     deleteTether();
+  }
+
+  @Test
+  public void testTetherTopic() throws IOException, TopicNotFoundException {
+    // Create tethering
+    createTether("xyz", NAMESPACES);
+
+    TopicId topic = new TopicId(NamespaceId.SYSTEM.getNamespace(),
+                                TetherServerHandler.TETHERING_TOPIC_PREFIX + "xyz");
+    // Per-peer messaging topic should be created
+    TopicMetadata metadata = messagingService.getTopic(topic);
+    Assert.assertEquals(topic, metadata.getTopicId());
+
+    // Delete tethering
+    deleteTether();
+
+    // Messaging topic should be deleted
+    try {
+      messagingService.getTopic(topic);
+      Assert.fail(String.format("Messaging topic %s was not deleted", topic.getTopic()));
+    } catch (TopicNotFoundException ignored) {
+    }
   }
 
   private void expectTetherControlResponse(String peerName, HttpResponseStatus status) throws IOException {

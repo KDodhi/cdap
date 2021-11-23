@@ -15,13 +15,12 @@
  */
 package io.cdap.cdap.internal.tether;
 
-import io.cdap.cdap.api.common.HttpErrorStatusProvider;
 import io.cdap.cdap.common.NotFoundException;
 
 /**
  * Thrown when a tether peer is not found.
  */
-public class PeerNotFoundException extends NotFoundException implements HttpErrorStatusProvider {
+public class PeerNotFoundException extends NotFoundException {
   public PeerNotFoundException(String peerName) {
     super(String.format("Peer %s not found", peerName));
   }
