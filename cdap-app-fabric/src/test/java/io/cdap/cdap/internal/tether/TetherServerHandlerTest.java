@@ -257,7 +257,6 @@ public class TetherServerHandlerTest {
 
     HttpRequest.Builder builder = HttpRequest.builder(HttpMethod.GET,
                                                       config.resolveURL("tethering/controlchannels/" + peerName));
-
     HttpResponse response = HttpRequests.execute(builder.build());
     Assert.assertEquals(status.code(), response.getResponseCode());
   }
@@ -265,7 +264,6 @@ public class TetherServerHandlerTest {
   private void createTether(String peerName, List<NamespaceAllocation> namespaces) throws IOException {
     TetherConnectionRequest tetherRequest = new TetherConnectionRequest(peerName, namespaces);
     doHttpRequest(HttpMethod.POST, "tethering/connect", GSON.toJson(tetherRequest));
-
   }
 
   private List<PeerStatus> getTetherStatus() throws IOException {

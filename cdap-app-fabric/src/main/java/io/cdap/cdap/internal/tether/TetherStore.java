@@ -207,6 +207,5 @@ public class TetherStore {
                                               PeerMetadata.class);
     long lastConnectionTime = row.getLong(StoreDefinition.TetherStore.LAST_CONNECTION_TIME_FIELD);
     return new PeerInfo(peerName, endpoint, tetherStatus, peerMetadata, lastConnectionTime);
-
   }
 }

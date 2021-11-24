@@ -16,6 +16,7 @@
 
 package io.cdap.cdap.internal.tether;
 
+import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.cdap.cdap.common.conf.CConfiguration;
@@ -86,6 +87,8 @@ public class TetherAgentService extends AbstractRetryableScheduledService {
     }
     for (PeerInfo peer : peers) {
       try {
+        Preconditions.checkArgument(peer.getEndpoint() != null,
+                                    "Peer %s doesn't have an endpoint", peer.getName());
         HttpResponse resp = TetherUtils.sendHttpRequest(HttpMethod.GET, new URI(peer.getEndpoint())
           .resolve(CONNECT_CONTROL_CHANNEL + instanceName));
         switch (resp.getResponseCode()) {
